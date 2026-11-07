@@ -20,7 +20,7 @@ export async function startServer(env: Record<string, string>, port: number, cmd
   // can run side by side; the dirs are reused between runs (Turbopack's cache makes restarts fast).
   const proc = spawn(process.execPath, ['scripts/serve.ts', cmd], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), APP_BASE_URL: `http://127.0.0.1:${port}`, NEXT_TELEMETRY_DISABLED: '1', ...isolated, ...env },
+    env: { ...process.env, PORT: String(port), APP_BASE_URL: `http://127.0.0.1:${port}`, NEXT_TELEMETRY_DISABLED: '1', MAINTENANCE_INTERVAL_MINUTES: '0', ...isolated, ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   proc.stdout!.on('data', (d) => logs.push(String(d)));

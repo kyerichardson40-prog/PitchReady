@@ -13,6 +13,8 @@ import { RepDirectory } from './manager-team.tsx';
 import { Transcript } from '../components/Transcript.tsx';
 
 
+const SAMPLE_LABELS = { sample_opening: 'Opening line', sample_explanation: 'Explaining the campaign', sample_unknown_answer: "When you don't know the answer", sample_disengagement: 'Leaving politely' } as const;
+
 export function ManagerOverviewPage() {
   const guard = useManagerGuard();
   const { repo, ctx } = useApp();
@@ -47,14 +49,14 @@ export function ManagerOverviewPage() {
           <div className="card">
             <h2>Skill breakdown · rubric {o.rubricVersion}</h2>
             <p className="small muted">Means use observed scores only. “Not observed” is never counted as zero. Fewer than {MIN_SAMPLE} observations is shown as not enough data.</p>
-            <div className="table-wrap"><table>
+            <div className="table-wrap"><table className="rtable">
               <thead><tr><th>Area</th><th>Observed</th><th>Mean</th><th>Scores 1·2·3·4·5</th></tr></thead>
               <tbody>{o.breakdown.map((d) => (
                 <tr key={d.key}>
-                  <td>{label(d.key)}</td>
-                  <td>{d.observed} <span className="muted small">({d.notObserved} not observed)</span></td>
-                  <td>{d.enoughData && d.mean !== null ? <span className="mean"><span className="mean-num">{d.mean.toFixed(1)}</span><span className="mean-bar" aria-hidden="true"><span style={{ width: `${(d.mean / 5) * 100}%` }} /></span></span> : <span className="muted small">Not enough data</span>}</td>
-                  <td className="small">{[1, 2, 3, 4, 5].map((s) => d.distribution[s as 1]).join(' · ')}</td>
+                  <td className="rt-main"><strong>{label(d.key)}</strong></td>
+                  <td data-label="Observed">{d.observed} <span className="muted small">({d.notObserved} not observed)</span></td>
+                  <td data-label="Mean">{d.enoughData && d.mean !== null ? <span className="mean"><span className="mean-num">{d.mean.toFixed(1)}</span><span className="mean-bar" aria-hidden="true"><span style={{ width: `${(d.mean / 5) * 100}%` }} /></span></span> : <span className="muted small">Not enough data</span>}</td>
+                  <td data-label="Scores 1·2·3·4·5" className="small">{[1, 2, 3, 4, 5].map((s) => d.distribution[s as 1]).join(' · ')}</td>
                 </tr>
               ))}</tbody>
             </table></div>
@@ -73,10 +75,10 @@ export function ManagerOverviewPage() {
       <div className="card">
         <h2>Recent sessions</h2>
         {sessions.loading ? <Loading /> : sessions.error ? <ErrorBox message={sessions.error} /> : !sessions.data?.length ? <p className="muted">No completed practice yet.</p> : (
-          <div className="table-wrap"><table>
-            <thead><tr><th>Rep</th><th>Practice</th><th>Ended</th><th>Status</th></tr></thead>
+          <div className="table-wrap"><table className="rtable">
+            <thead><tr><th>Practice</th><th>Rep</th><th>Ended</th><th>Status</th></tr></thead>
             <tbody>{sessions.data.slice(0, 25).map((s) => (
-              <tr key={s.id}><td>{s.repName}</td><td><Link to={`/manager/sessions/${s.id}`}>{sessionTitle(s)}</Link></td><td className="small">{fmtDate(s.endedAt)}</td><td><StatusTag s={s} /></td></tr>
+              <tr key={s.id}><td className="rt-main"><Link to={`/manager/sessions/${s.id}`}>{sessionTitle(s)}</Link></td><td data-label="Rep">{s.repName}</td><td data-label="Ended" className="small">{fmtDate(s.endedAt)}</td><td data-label="Status"><StatusTag s={s} /></td></tr>
             ))}</tbody>
           </table></div>
         )}
@@ -107,7 +109,7 @@ export function ManagerRepsPage() {
         <>
           <RepDirectory members={r.members} admin={admin.data ?? null} />
           <p className="small muted">Managers: {r.members.filter((m) => m.role === 'manager').map((m) => m.name).join(', ')} · Seat limit {r.seatLimit} reps.</p>
-          <div className="card">
+          <div className="card invite-card">
             <h2>Invite someone</h2>
             <p className="small muted">This creates a single-use link for you to copy and send yourself. PitchReady does not email anyone.</p>
             <form onSubmit={async (e) => { e.preventDefault(); setCopied(false); await act(async () => { setLink(await repo.createInvitation({ email, role })); setEmail(''); }); }}>
@@ -127,13 +129,13 @@ export function ManagerRepsPage() {
           <div className="card table-wrap">
             <h2>Invitations</h2>
             {r.invitations.length === 0 ? <p className="muted">No invitations.</p> : (
-              <table>
+              <table className="rtable">
                 <thead><tr><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
                 <tbody>{r.invitations.map((i) => {
                   const status = i.usedAt ? 'Accepted' : i.revokedAt ? 'Revoked' : new Date(i.expiresAt) < new Date() ? 'Expired' : `Pending · expires ${fmtDate(i.expiresAt)}`;
                   return (
-                    <tr key={i.id}><td>{i.email}</td><td>{i.role}</td><td className="small">{status}</td>
-                      <td>{!i.usedAt && !i.revokedAt && new Date(i.expiresAt) > new Date() && <button className="btn danger" onClick={() => void act(() => repo.revokeInvitation(i.id))}>Revoke</button>}</td></tr>
+                    <tr key={i.id}><td className="rt-main"><strong>{i.email}</strong></td><td data-label="Role">{i.role}</td><td data-label="Status" className="small">{status}</td>
+                      <td className="rt-actions">{!i.usedAt && !i.revokedAt && new Date(i.expiresAt) > new Date() && <button className="btn danger" onClick={() => void act(() => repo.revokeInvitation(i.id))}>Revoke</button>}</td></tr>
                   );
                 })}</tbody>
               </table>
@@ -256,7 +258,7 @@ export function ManagerCampaignPage() {
         <div className="field"><label htmlFor="c-org">Organisation</label><input id="c-org" value={pack.organisation} onChange={(e) => set({ organisation: e.target.value })} /></div>
       </div>
 
-      <section className="card" aria-labelledby="rules-must">
+      <section className="card rules-section rules-must" aria-labelledby="rules-must">
         <h2 id="rules-must">What reps must say</h2>
         <p className="small muted">Every practice is checked against these, and feedback shows a must-say checklist. Cue words are example wordings (comma-separated): the AI judges the meaning, the scripted demo matches the words.</p>
         {pack.must_say.map((m, i) => (
@@ -275,7 +277,7 @@ export function ManagerCampaignPage() {
         }}>Add must-say statement</button>
       </section>
 
-      <section className="card" aria-labelledby="rules-never">
+      <section className="card rules-section rules-never" aria-labelledby="rules-never">
         <h2 id="rules-never">What reps must never say</h2>
         <div className="field">
           <label htmlFor="never-say">Never-say words and phrases (one per line)</label>
@@ -289,7 +291,7 @@ export function ManagerCampaignPage() {
         </div>
       </section>
 
-      <section className="card" aria-labelledby="rules-facts">
+      <section className="card rules-section rules-facts" aria-labelledby="rules-facts">
         <h2 id="rules-facts">Approved facts</h2>
         <p className="small muted">The only campaign facts reps may state. Anything else should be “I’d need to check”.</p>
         {pack.approved_facts.map((f, i) => (
@@ -305,7 +307,7 @@ export function ManagerCampaignPage() {
         }}>Add fact</button>
       </section>
 
-      <section className="card" aria-labelledby="rules-objections">
+      <section className="card rules-section rules-objections" aria-labelledby="rules-objections">
         <h2 id="rules-objections">Approved answers to objections</h2>
         <p className="small muted">Your approved responses. Reps can read them before practising, and AI feedback bases its advice on them.</p>
         {pack.objection_answers.map((o, i) => (
@@ -323,15 +325,15 @@ export function ManagerCampaignPage() {
       <div className="card">
         <h2>Sample lines</h2>
         {(['sample_opening', 'sample_explanation', 'sample_unknown_answer', 'sample_disengagement'] as const).map((k) => (
-          <div className="field" key={k}><label htmlFor={k}>{k.replace('sample_', '').replace('_', ' ')}</label><textarea id={k} value={pack[k]} onChange={(e) => set({ [k]: e.target.value } as Partial<CampaignPack>)} /></div>
+          <div className="field" key={k}><label htmlFor={k}>{SAMPLE_LABELS[k]}</label><textarea id={k} value={pack[k]} onChange={(e) => set({ [k]: e.target.value } as Partial<CampaignPack>)} /></div>
         ))}
       </div>
-      <div className="card">
+      <div className="card rules-card">
         <h2>Rubric anchors</h2>
         <p className="small muted">The example rubric is generic — edit it to match your training method. Changing anchors publishes a new rubric version; progress on different versions is never combined.</p>
         {rubric.dimensions.map((d, di) => (
-          <details key={d.key} style={{ marginBottom: '0.5rem' }}>
-            <summary><strong>{d.label}</strong></summary>
+          <details key={d.key}>
+            <summary>{d.label}</summary>
             {d.anchors.map((a, ai) => (
               <div className="field" key={a.score}><label htmlFor={`a-${d.key}-${a.score}`}>Score {a.score}</label>
                 <input id={`a-${d.key}-${a.score}`} value={a.description} onChange={(e) => setRubric({ ...rubric, dimensions: rubric.dimensions.map((x, j) => (j === di ? { ...x, anchors: x.anchors.map((y, k) => (k === ai ? { ...y, description: e.target.value } : y)) } : x)) })} /></div>
@@ -346,7 +348,7 @@ export function ManagerCampaignPage() {
           <ul className="small">{pack.approved_facts.map((f) => <li key={f.id}><strong>{f.id}</strong> {f.text}</li>)}</ul>
         </div>
       )}
-      <div className="row">
+      <div className="row action-bar">
         <button className="btn" onClick={() => setPreview((p) => !p)}>{preview ? 'Hide preview' : 'Preview'}</button>
         <button className="btn" onClick={async () => { if (!validate()) return; try { await repo.saveDraft(pack, rubric); setMsg('Draft saved.'); q.reload(); } catch (e: any) { setErrs([e.message]); } }}>Save draft</button>
         <button className="btn primary" disabled={!q.data.draft} onClick={async () => {

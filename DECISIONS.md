@@ -72,3 +72,8 @@ Each is reversible unless stated.
 - `.github/workflows/android.yml` builds a test APK and a Play bundle (signed if upload-key secrets are set) on GitHub's runners.
 - Not done or verified: no compile of either app (no macOS; the Android SDK and Maven hosts are blocked in the build workspace), no device run, no store submission. Apple 5.1.1(v) needs in-app account deletion, and deleting the Supabase Auth user is still manual (D13). See `docs/APP_STORES.md`.
 
+## D28 — Maintenance runs inside the server
+The hosted pilot is one Railway service. Rather than a second cron service or an external scheduler, the server starts a timer from `instrumentation.ts` (connected mode only, never during `next build`) and runs the same work as `POST /api/maintenance` every 10 minutes, first run one minute after start. Runs never overlap within a process; across several instances the database functions are lock-protected and idempotent. `MAINTENANCE_INTERVAL_MINUTES=0` turns it off (tests do), and the route stays available for an external cron.
+
+## D29 — Visual identity
+Painted front doors of a British street: teal, postbox red, cobalt and mustard on a cool pavement grey, navy ink, brass door numbers, and Bricolage Grotesque (OFL, self-hosted in `public/fonts`, embedded in the standalone demo) for headings. The landing page has one looping doorstep animation; scenarios are numbered doors; feedback reuses the landing page's outlined card. All motion is CSS and stops under `prefers-reduced-motion`; no inline style attributes are server-rendered (production CSP). Manager tables turn into stacked cards below 760px.

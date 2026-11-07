@@ -40,10 +40,9 @@
     "lib/**/*.ts",
     "server/**/*.ts",
     "proxy.ts",
+    "instrumentation.ts",
     "next.config.ts",
-    ".next/dev/types/**/*.ts",
-    ".next-test-3320/types/**/*.ts",
-    ".next-test-3320/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

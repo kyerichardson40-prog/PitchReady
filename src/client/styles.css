@@ -446,3 +446,57 @@ label:has(> input[type="checkbox"]) { display: flex; flex-wrap: nowrap; align-it
   .nav a, .nav .btn.link { flex: none; padding: 0 0.85rem; }
 }
 .paint-3 .door-ico-plate { background: var(--ink); color: #fff; }
+
+/* ---- people */
+.person { display: flex; gap: 0.7rem; align-items: center; }
+.avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 0.95rem; color: #fff; }
+.paint-bg-0 { background: var(--paint-teal); }
+.paint-bg-1 { background: var(--paint-red); }
+.paint-bg-2 { background: var(--paint-cobalt); }
+.paint-bg-3 { background: var(--paint-mustard); color: var(--ink); }
+
+/* ---- tables become stacked cards on phones */
+@media (max-width: 760px) {
+  table.rtable, .rtable tbody, .rtable tr, .rtable td { display: block; width: 100%; }
+  .rtable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rtable tr { background: var(--surface-2); border-radius: 14px; padding: 0.7rem 0.9rem; margin-bottom: 0.6rem; }
+  .rtable td { border: none; padding: 0.22rem 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-align: right; }
+  .rtable td[data-label]::before { content: attr(data-label); color: var(--muted); font-size: 0.85rem; font-weight: 600; text-align: left; flex: none; }
+  .rtable td.rt-main { display: block; text-align: left; padding-bottom: 0.45rem; font-size: 1.02rem; }
+  .rtable td.rt-actions { justify-content: flex-end; }
+  .rtable td.rt-actions:empty { display: none; }
+  .card.table-wrap { overflow-x: visible; }
+}
+
+/* ---- rep profile and team page */
+.stat.stat-tile strong { font-size: 2rem; line-height: 1.1; }
+.danger-zone { border: 2px dashed #f2c0c5; box-shadow: none; }
+.invite-card { background: #fff6d6; border: 2px solid var(--paint-mustard); }
+.invite-card .muted { color: #5a4b14; }
+
+/* ---- manager scenario list: doors without the link behaviour */
+.door-card-static { cursor: default; align-items: flex-start; }
+.door-card-static:hover { transform: none; box-shadow: none; border-color: var(--line); }
+.door-card-static .door-ico { align-self: flex-start; }
+.door-card-static .door-card-body { flex: 1; }
+.door-card-static.is-archived { opacity: 0.65; }
+.door-card-static.is-archived .door-ico-leaf { filter: grayscale(1); }
+
+/* ---- rules & campaign editor */
+.rules-section { border-top-width: 6px; }
+.rules-must { border-top-color: #1f9d57; }
+.rules-never { border-top-color: var(--paint-red); }
+.rules-facts { border-top-color: var(--paint-cobalt); }
+.rules-objections { border-top-color: var(--paint-mustard); }
+.rules-section h2 { display: flex; align-items: center; gap: 0.55rem; }
+.rules-section h2::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 50%; }
+.rules-must h2::before { background: #1f9d57; }
+.rules-never h2::before { background: var(--paint-red); }
+.rules-facts h2::before { background: var(--paint-cobalt); }
+.rules-objections h2::before { background: var(--paint-mustard); }
+.action-bar { position: sticky; bottom: 0; z-index: 5; background: rgba(243, 245, 250, 0.94); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom, 0)); border-top: 1px solid var(--line); margin-top: 0.5rem; }
+.action-bar .btn.primary { margin-left: auto; }
+
+/* ---- sign-in */
+.narrow h1 { margin-top: 0.25rem; }
+@media (max-width: 560px) { .rule-row > .grow { flex-basis: calc(100% - 3rem); } }

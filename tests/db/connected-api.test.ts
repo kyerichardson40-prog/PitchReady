@@ -265,7 +265,7 @@ describe('manager controls over HTTP (agency B)', () => {
 describe('mode guards', () => {
   test('demo mode refuses production and non-localhost binding; connected mode without config fails closed', async () => {
     const run = (env: Record<string, string>) => new Promise<number>((resolve) => {
-      const p = spawn(process.execPath, ['scripts/serve.ts', 'dev'], { env: { ...process.env, ...env }, stdio: 'ignore' });
+      const p = spawn(process.execPath, ['scripts/serve.ts', 'dev'], { env: { ...process.env, MAINTENANCE_INTERVAL_MINUTES: '0', ...env }, stdio: 'ignore' });
       const t = setTimeout(() => { p.kill(); resolve(-1); }, 10000);
       p.on('exit', (code) => { clearTimeout(t); resolve(code ?? 0); });
     });

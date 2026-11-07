@@ -2,7 +2,7 @@
 
 Spoken practice and evidence-linked coaching for UK door-to-door fundraising teams. A rep practises a short simulated doorstep conversation (≤ 3 minutes), gets feedback on five rubric areas where every score points at quoted transcript words, and retries the weakest part in a 60-second drill. Managers see participation, a sample-size-aware skill breakdown, flagged sessions and remaining allowance.
 
-**Status:** pre-pilot prototype. Runs locally in two explicit modes. It has not been deployed, connected to a real Supabase project, or called against live Anthropic/Deepgram APIs — see `TEST_REPORT.md`.
+**Status:** pilot deployment on Railway + Supabase (connected mode). Earlier status note: Runs locally in two explicit modes. It has not been deployed, connected to a real Supabase project, or called against live Anthropic/Deepgram APIs — see `TEST_REPORT.md`.
 
 All campaign content is the **fictional** "Neighbourhood Meal Project" from the build pack. No real charity, donation or payment process exists.
 
@@ -67,7 +67,7 @@ Connected mode = real Supabase Auth + Postgres with RLS, server-only providers, 
    - `PROVIDER_RATE_CARD_PATH` → copy `config/rate-card.example.json`, fill prices from the providers' current pricing pages (none are shipped). The server refuses to start live AI if a configured model has no price.
    - `AI_GLOBAL_BUDGET_MINOR_UNITS`, `AI_AGENCY_BUDGET_MINOR_UNITS`, `AI_BUDGET_CURRENCY` (must match the rate card).
    - `LIVE_AI_ENABLED=true`. Also set provider-side spend limits in the Anthropic and Deepgram consoles where available — local budgets are estimates.
-6. **Schedule maintenance** every 5–15 minutes: `POST /api/maintenance` with `Authorization: Bearer $MAINTENANCE_SECRET` (or `npm run maintenance`). It expires sessions, releases reservations, retries pending evaluations, honours deletion requests and applies retention.
+6. **Maintenance runs by itself.** The server runs it every 10 minutes (`instrumentation.ts` → `server/scheduler.ts`; `MAINTENANCE_INTERVAL_MINUTES`, `0` = off). It expires sessions, releases reservations, retries pending evaluations, honours deletion requests and applies retention. It can also be triggered: `POST /api/maintenance` with `Authorization: Bearer $MAINTENANCE_SECRET` (or `npm run maintenance`).
 
 Local Supabase test data: `node scripts/seed-local.ts` (refuses non-local hosts; prints random one-time passwords).
 

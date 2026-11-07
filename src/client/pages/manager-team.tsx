@@ -41,17 +41,17 @@ export function RepDirectory({ members, admin }: { members: RepDirectoryRow[]; a
         </div>
       </div>
       {reps.length === 0 ? <p className="muted">No reps match.</p> : (
-        <table>
+        <table className="rtable">
           <thead><tr><th>Rep</th><th>Status</th><th>Scenarios</th><th>Sessions</th><th>Last practice</th><th>Avg score</th><th>Open flags</th></tr></thead>
-          <tbody>{reps.map((m) => (
+          <tbody>{reps.map((m, i) => (
             <tr key={m.userId}>
-              <td><Link to={`/manager/reps/${m.userId}`}>{m.name}</Link><br /><span className="small muted">{m.email}</span></td>
-              <td>{m.active ? <span className="tag teal">Active</span> : <span className="tag">Deactivated</span>}</td>
-              <td className="small">{scenarioSummary(m.assignedKeys, admin)}</td>
-              <td>{m.sessions}</td>
-              <td className="small">{m.lastPracticeAt ? fmtDate(m.lastPracticeAt) : '—'}</td>
-              <td>{m.meanScore === null ? <span className="small muted">—</span> : <>{m.meanScore}<span className="small muted"> /5 · {m.scoredSessions} session{m.scoredSessions === 1 ? '' : 's'}</span></>}</td>
-              <td>{m.openFlags ? <span className="tag amber">{m.openFlags}</span> : '0'}</td>
+              <td className="rt-main"><span className="person"><span className={`avatar paint-bg-${i % 4}`} aria-hidden="true">{initials(m.name)}</span><span><Link to={`/manager/reps/${m.userId}`}>{m.name}</Link><br /><span className="small muted">{m.email}</span></span></span></td>
+              <td data-label="Status">{m.active ? <span className="tag teal">Active</span> : <span className="tag">Deactivated</span>}</td>
+              <td data-label="Scenarios" className="small">{scenarioSummary(m.assignedKeys, admin)}</td>
+              <td data-label="Sessions">{m.sessions}</td>
+              <td data-label="Last practice" className="small">{m.lastPracticeAt ? fmtDate(m.lastPracticeAt) : '—'}</td>
+              <td data-label="Avg score">{m.meanScore === null ? <span className="small muted">—</span> : <span className="mean"><span className="mean-num">{m.meanScore}</span><span className="mean-bar" aria-hidden="true"><span style={{ width: `${(m.meanScore / 5) * 100}%` }} /></span><span className="small muted">{m.scoredSessions} session{m.scoredSessions === 1 ? '' : 's'}</span></span>}</td>
+              <td data-label="Open flags">{m.openFlags ? <span className="tag amber">{m.openFlags}</span> : '0'}</td>
             </tr>
           ))}</tbody>
         </table>
@@ -87,17 +87,17 @@ export function RepProfilePage({ id }: { id: string }) {
       {msg && <div className="alert info" role="status">{msg}</div>}
       {err && <ErrorBox message={err} />}
       <div className="grid three">
-        <div className="card stat"><span className="small muted">Sessions</span><strong>{m.sessions}</strong><span className="small muted">{m.completed} with feedback</span></div>
-        <div className="card stat"><span className="small muted">Practice time</span><strong>{minutesUsed} min</strong><span className="small muted">Last: {m.lastPracticeAt ? fmtDate(m.lastPracticeAt) : 'never'}</span></div>
-        <div className="card stat"><span className="small muted">Open flags</span><strong>{m.openFlags}</strong><span className="small muted">Concerns and reports to review</span></div>
+        <div className="card stat stat-tile tile-teal"><span className="small muted">Sessions</span><strong>{m.sessions}</strong><span className="small muted">{m.completed} with feedback</span></div>
+        <div className="card stat stat-tile tile-mustard"><span className="small muted">Practice time</span><strong>{minutesUsed} min</strong><span className="small muted">Last: {m.lastPracticeAt ? fmtDate(m.lastPracticeAt) : 'never'}</span></div>
+        <div className={`card stat stat-tile ${m.openFlags > 0 ? 'tile-red' : 'tile-plain'}`}><span className="small muted">Open flags</span><strong>{m.openFlags}</strong><span className="small muted">Concerns and reports to review</span></div>
       </div>
 
       <div className="card table-wrap">
         <h2>Skills (rubric {rubricVersion})</h2>
-        <table>
+        <table className="rtable">
           <thead><tr><th>Area</th><th>Average</th><th>Observed</th><th>Not observed</th></tr></thead>
           <tbody>{breakdown.map((d) => (
-            <tr key={d.key}><td>{dimLabel(d.key)}</td><td>{d.mean ?? '—'}{d.mean !== null && !d.enoughData && <span className="small muted"> (fewer than {MIN_SAMPLE})</span>}</td><td>{d.observed}</td><td>{d.notObserved}</td></tr>
+            <tr key={d.key}><td className="rt-main"><strong>{dimLabel(d.key)}</strong></td><td data-label="Average">{d.mean === null ? '—' : <span className="mean"><span className="mean-num">{d.mean}</span><span className="mean-bar" aria-hidden="true"><span style={{ width: `${(d.mean / 5) * 100}%` }} /></span>{!d.enoughData && <span className="small muted">fewer than {MIN_SAMPLE}</span>}</span>}</td><td data-label="Observed">{d.observed}</td><td data-label="Not observed">{d.notObserved}</td></tr>
           ))}</tbody>
         </table>
       </div>
@@ -109,17 +109,17 @@ export function RepProfilePage({ id }: { id: string }) {
       <div className="card table-wrap">
         <h2>Practice history</h2>
         {sessions.length === 0 ? <p className="muted">No practice yet.</p> : (
-          <table>
+          <table className="rtable">
             <thead><tr><th>Scenario</th><th>Ended</th><th>Status</th><th>Flags</th></tr></thead>
             <tbody>{sessions.map((s) => (
-              <tr key={s.id}><td><Link to={`/manager/sessions/${s.id}`}>{sessionTitle({ scenarioKey: s.scenarioKey, scenarioTitle: s.scenarioTitle, drillKey: s.drillKey as never })}</Link></td><td className="small">{fmtDate(s.endedAt)}</td><td><StatusTag s={s} /></td><td>{s.openConcerns + s.openReports || '0'}</td></tr>
+              <tr key={s.id}><td className="rt-main"><Link to={`/manager/sessions/${s.id}`}>{sessionTitle({ scenarioKey: s.scenarioKey, scenarioTitle: s.scenarioTitle, drillKey: s.drillKey as never })}</Link></td><td data-label="Ended" className="small">{fmtDate(s.endedAt)}</td><td data-label="Status"><StatusTag s={s} /></td><td data-label="Flags">{s.openConcerns + s.openReports || '0'}</td></tr>
             ))}</tbody>
           </table>
         )}
       </div>
 
       {m.userId !== ctx?.user?.id && (
-        <div className="card">
+        <div className="card danger-zone">
           <h2>Access</h2>
           {m.active
             ? <><p className="small">Deactivating removes access immediately, including any practice in progress. Their history stays.</p><button className="btn danger" onClick={() => { if (confirm(`Deactivate ${m.name}?`)) void act(() => repo.setMemberActive(m.userId, false), `${m.name} has been deactivated.`); }}>Deactivate</button></>
@@ -228,11 +228,13 @@ export function ManagerScenariosPage() {
         </form>
       )}
       {admin.scenarios.length === 0 ? <Empty>No scenarios yet.</Empty> : (
-        <ul className="scenario-list">
-          {admin.scenarios.map((s) => (
-            <li key={s.key} className="scenario-card">
-              <div className="spread"><strong>{s.title}</strong><span className="row">{s.archived ? <span className="tag">Archived</span> : <span className="tag teal">Active</span>}<span className="tag">v{s.version}</span></span></div>
-              <p className="quote" style={{ margin: '0.25rem 0' }}>“{s.opener}”</p>
+        <ul className="door-list">
+          {admin.scenarios.map((s, i) => (
+            <li key={s.key} className={`door-card door-card-static paint-${i % 4}${s.archived ? ' is-archived' : ''}`}>
+              <span className="door-ico" aria-hidden="true"><span className="door-ico-light" /><span className="door-ico-leaf"><span className="door-ico-plate">{i + 1}</span></span></span>
+              <div className="door-card-body">
+              <div className="spread"><strong className="door-card-title">{s.title}</strong><span className="row">{s.archived ? <span className="tag">Archived</span> : <span className="tag teal">Active</span>}<span className="tag">v{s.version}</span></span></div>
+              <span className="door-card-quote">“{s.opener}”</span>
               <p className="small m0">Resident: {s.persona} · Objection: {s.objection} · Skill: {s.skill}</p>
               {!s.archived && <p className="small muted m0">Practised by: {whoHas(s.key)}</p>}
               <div className="row mt-sm">
@@ -241,10 +243,16 @@ export function ManagerScenariosPage() {
                   ? <button className="btn" aria-label={`Restore ${s.title}`} onClick={() => void act(() => repo.setScenarioArchived(s.key, false), `${s.title} restored.`)}>Restore</button>
                   : <button className="btn danger" aria-label={`Archive ${s.title}`} onClick={() => { if (confirm(`Archive “${s.title}”? Reps can no longer start it; past sessions keep it.`)) void act(() => repo.setScenarioArchived(s.key, true), `${s.title} archived.`); }}>Archive</button>}
               </div>
+              </div>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
+}
+
+function initials(name: string): string {
+  const words = name.replace(/\(.*?\)/g, '').trim().split(/\s+/).filter(Boolean);
+  return ((words[0]?.[0] ?? '?') + (words.length > 1 ? words[words.length - 1]![0] : '')).toUpperCase();
 }
