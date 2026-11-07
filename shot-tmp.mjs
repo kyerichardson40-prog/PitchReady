@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch();
+const U = 'http://127.0.0.1:3101';
+const p = await b.newPage({ viewport: { width: 390, height: 844 } });
+await p.goto(U + '/login?role=manager'); await p.waitForTimeout(1500);
+await p.getByRole('radio').first().check(); await p.getByRole('button', { name: 'Sign in', exact: true }).click();
+await p.getByRole('heading', { name: 'Team overview' }).waitFor(); await p.waitForTimeout(1200);
+await p.screenshot({ path: '/tmp/v2-mgr.png' });
+await p.getByRole('button', { name: /^Sign out/ }).click(); await p.waitForTimeout(800);
+await p.goto(U + '/login?role=rep'); await p.waitForTimeout(1200);
+await p.getByRole('radio', { name: /Priya/ }).check(); await p.getByRole('button', { name: 'Sign in', exact: true }).click();
+await p.getByRole('heading', { name: 'Practise', exact: true }).waitFor();
+await p.locator('.door-card').nth(3).click(); await p.waitForTimeout(1200);
+await p.getByRole('button', { name: /^Start/ }).first().click(); await p.waitForTimeout(2500);
+await p.screenshot({ path: '/tmp/v2-live.png' });
+await b.close();

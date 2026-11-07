@@ -1,0 +1,31 @@
+# Non-live checks only: no provider keys, no Supabase project. Providers are labelled mocks.
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_HOST_AUTH_METHOD: trust }
+        ports: ['54329:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PITCHREADY_PG_ADMIN_URL: postgres://postgres@127.0.0.1:54329/postgres
+      SKIP_LOCAL_POSTGRES: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run check:bundle   # production `next build` (connected) + client bundle scan; reused by tests/e2e/production.test.ts
+      - run: node scripts/calibrate.ts --strict
+      - run: npm run test:db
+      - run: npm run test:e2e

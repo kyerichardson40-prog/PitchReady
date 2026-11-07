@@ -1,0 +1,57 @@
+# Builds the Android app on GitHub's servers (they have the Android SDK). Run it by hand:
+# Actions → android → Run workflow. DECISIONS.md D27, docs/APP_STORES.md.
+#
+# Outputs (workflow artifacts):
+#  - app-debug.apk: install on a phone for testing (allow installs from this source when asked).
+#  - app-release.aab: the Play Store upload, signed with your upload key if the four
+#    ANDROID_* secrets below are set; otherwise unsigned (Play Console will refuse it).
+#
+# Repository variable PITCHREADY_APP_URL (Settings → Secrets and variables → Actions → Variables):
+#   empty = bundled offline demo (testing only); https://… = the hosted pilot app (store build).
+# Secrets for signing: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
+name: android
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      PITCHREADY_APP_URL: ${{ vars.PITCHREADY_APP_URL }}
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: npm ci
+      - run: npm run app:sync
+      - name: Android SDK platform
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null
+      - name: Build debug APK and release bundle
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug bundleRelease
+      - name: Sign release bundle (if signing secrets are set)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            jarsigner -keystore "$RUNNER_TEMP/upload.jks" -storepass "$KS_PASS" -keypass "$KEY_PASS" -sigalg SHA256withRSA -digestalg SHA-256 "$AAB" "$KEY_ALIAS"
+            rm -f "$RUNNER_TEMP/upload.jks"
+          else
+            echo "::warning::No signing secrets: the release bundle is unsigned and Play Console will not accept it."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pitchready-android
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error

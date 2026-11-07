@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.pgdata/
+test-results/
+reports/calibration-*.json
+.next/
+.next-*/
+next-env.d.ts
+*.tsbuildinfo

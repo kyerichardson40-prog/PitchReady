@@ -1,0 +1,16 @@
+{
+  "_instructions": "Copy to config/rate-card.json (git-ignored is fine), fill every price from the providers' CURRENT pricing pages, set effective_date and source_note, and point PROVIDER_RATE_CARD_PATH at it. Amounts are MINOR units of currency (e.g. pence), may be fractional, and are rounded up. Keys are the exact model IDs from your .env. This file intentionally contains NO real prices; the loader rejects it until filled. Remove this _instructions key.",
+  "currency": "GBP",
+  "effective_date": "YYYY-MM-DD",
+  "source_note": "Where each price was taken from, and when",
+  "anthropic": {
+    "<ANTHROPIC_ROLEPLAY_MODEL id>": { "input_per_million_tokens_minor": null, "output_per_million_tokens_minor": null },
+    "<ANTHROPIC_EVALUATION_MODEL id>": { "input_per_million_tokens_minor": null, "output_per_million_tokens_minor": null }
+  },
+  "deepgram_stt": {
+    "<DEEPGRAM_STT_MODEL id>": { "per_minute_minor": null }
+  },
+  "deepgram_tts": {
+    "<DEEPGRAM_TTS_MODEL id>": { "per_thousand_characters_minor": null }
+  }
+}

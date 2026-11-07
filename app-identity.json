@@ -1,0 +1,5 @@
+{
+  "//": "Store identity for the iOS/Android apps. Change with: node scripts/set-app-identity.ts --id uk.co.yourcompany.app --name \"Your App\". The id can never change after the first store upload; 'PitchReady' is a working name not yet cleared (DECISIONS D27).",
+  "appId": "com.example.pitchready",
+  "appName": "PitchReady"
+}

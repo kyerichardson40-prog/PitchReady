@@ -1,0 +1,47 @@
+{
+  "name": "pitchready",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PitchReady — spoken practice and evidence-linked coaching for door-to-door fundraising teams (pre-pilot prototype).",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.ts dev",
+    "build": "next build",
+    "start": "node scripts/serve.ts start",
+    "build:static-demo": "node scripts/build-static-demo.ts",
+    "app:build": "node scripts/build-app.ts",
+    "app:sync": "node scripts/build-app.ts && cap sync",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "node --test tests/unit/*.test.ts",
+    "test:db": "node --test --test-concurrency=1 tests/db/*.test.ts",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.ts",
+    "check:bundle": "node scripts/check-bundle-secrets.ts",
+    "check": "npm run typecheck && npm test && npm run check:bundle",
+    "calibrate": "node scripts/calibrate.ts",
+    "bootstrap:agency": "node scripts/bootstrap-agency.ts",
+    "maintenance": "node scripts/maintenance.ts",
+    "db:local": "bash scripts/local-postgres.sh",
+    "setup:local": "node scripts/setup-local.ts"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "next": "16.4.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "@types/node": "26.6.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "esbuild": "0.28.2",
+    "playwright": "1.63.0",
+    "typescript": "6.0.3"
+  }
+}

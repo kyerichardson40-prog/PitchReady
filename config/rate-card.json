@@ -1,0 +1,14 @@
+{
+  "currency": "USD",
+  "effective_date": "2026-11-06",
+  "source_note": "US cents. Claude Haiku 5.5 $0.10/$0.50 per million tokens (prompts up to 100K) from Anthropic's API pricing, as reported Oct-Nov 2026. Deepgram pay-as-you-go from deepgram.com/pricing, checked 2026-11-06: Nova-3 monolingual $0.0077/min, Aura-2 $0.030 per 1k characters. Re-check before any paid launch.",
+  "anthropic": {
+    "claude-haiku-5-5": { "input_per_million_tokens_minor": 10, "output_per_million_tokens_minor": 50 }
+  },
+  "deepgram_stt": {
+    "nova-3": { "per_minute_minor": 0.77 }
+  },
+  "deepgram_tts": {
+    "aura-2-draco-en": { "per_thousand_characters_minor": 3 }
+  }
+}
