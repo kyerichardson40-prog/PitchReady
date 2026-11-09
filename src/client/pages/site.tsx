@@ -8,7 +8,7 @@ import { useApp } from '../app-context.tsx';
 import { Link } from '../router.tsx';
 import { CHANNEL_INFO, SALES_CHANNELS } from '../../../lib/domain/sales.ts';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
-import { TERMS_VERSION } from '../../../lib/content/legal.ts';
+import { TERMS_EFFECTIVE_DATE } from '../../../lib/content/legal.ts';
 
 const YEAR = new Date().getFullYear();
 
@@ -306,7 +306,7 @@ export function TermsPage() {
       <section className="site-section" aria-label="Terms">
         <div className="lp-wrap site-prose site-terms">
           <p className="alert warn">Draft for completion and legal review. These terms have not yet been checked by a solicitor. Highlighted items are still to be completed.</p>
-          <p className="small muted">Version {TERMS_VERSION} · Effective date: <Todo>date of publication</Todo></p>
+          <p className="small muted">Effective date: {TERMS_EFFECTIVE_DATE}</p>
 
           <h2>1. Who we are</h2>
           <p>PitchReady is provided by Kye Richardson trading as PitchReady (“PitchReady”, “we”, “us” or “our”), a sole trader based in Kent, United Kingdom.</p>
