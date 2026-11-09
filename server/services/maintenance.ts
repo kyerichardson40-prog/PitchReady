@@ -1,5 +1,7 @@
 import { getDb } from '../db.ts';
 import { runEvaluationJob } from './evaluation.ts';
+import { getConfig } from '../config.ts';
+import { emailConfigured, managerEmail, sendEmail, type ManagerNotification } from './notify.ts';
 
 export type MaintenanceResult = Record<string, unknown> & { evaluations: Record<string, number> };
 
@@ -20,5 +22,26 @@ export async function runMaintenance(budgetMs = 50_000): Promise<MaintenanceResu
   // Enquiry retention (12 months). Skipped quietly until the contact_messages migration is applied.
   let purged: Record<string, unknown> = {};
   try { purged = (await getDb().service().rpc<any>('purge_contact_messages', {})) ?? {}; } catch { /* not installed yet */ }
-  return { ...(result ?? {}), ...purged, evaluations };
+  // Practice allowances renew by themselves. Skipped quietly until the migration is applied.
+  let renewed: Record<string, unknown> = {};
+  try { renewed = (await getDb().service().rpc<any>('renew_allowances', {})) ?? {}; } catch { /* not installed yet */ }
+  const emails = await sendManagerEmails().catch(() => ({}));
+  return { ...(result ?? {}), ...purged, ...renewed, ...emails, evaluations };
+}
+
+/**
+ * Manager emails: newly flagged sessions and the weekly summary. Only claimed from the database
+ * when an email service is configured, so nothing is marked as sent while emails can't go out.
+ */
+export async function sendManagerEmails(): Promise<Record<string, number>> {
+  if (!emailConfigured()) return {};
+  let due: ManagerNotification[];
+  try { due = (await getDb().service().rpc<ManagerNotification[]>('claim_manager_notifications', {})) ?? []; } catch { return {}; }
+  let sent = 0;
+  const base = getConfig().env.APP_BASE_URL.replace(/\/$/, '');
+  for (const n of due) {
+    const { subject, text } = managerEmail(n, base);
+    if ((await sendEmail({ to: n.managers, subject, text, tag: 'manager' })) === 'sent') sent++;
+  }
+  return sent ? { manager_emails_sent: sent } : {};
 }

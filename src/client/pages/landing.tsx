@@ -128,6 +128,8 @@ const FAQS = [
   { q: 'How much does it cost?', a: 'We run pilots with small teams first so you can see the difference before committing. Get in touch and we’ll talk through what would suit your team.' },
 ];
 
+const PILOT_LINK = `/login?signup=1&next=${encodeURIComponent('/start')}`;
+
 export function HomePage() {
   const navigate = useNavigate();
   const { repo, ctx, refresh } = useApp();
@@ -146,6 +148,11 @@ export function HomePage() {
     <div className="lp-ctas">
       <Link to="/login?role=rep" className="lp-btn lp-btn-main">Try it as a rep</Link>
       <Link to="/login?role=manager" className="lp-btn lp-btn-alt">Try it as a manager</Link>
+    </div>
+  ) : ctx?.pilotsOpen ? (
+    <div className="lp-ctas">
+      <Link to={PILOT_LINK} className="lp-btn lp-btn-main">Start a free pilot</Link>
+      <Link to="/how-it-works" className="lp-btn lp-btn-quiet">See how it works</Link>
     </div>
   ) : (
     <div className="lp-ctas">
@@ -261,6 +268,38 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="lp-pricing" aria-labelledby="lp-pricing-title">
+        <div className="lp-wrap">
+          <h2 id="lp-pricing-title" className="lp-h2">Try it free, then pay for what your team uses</h2>
+          <div className="lp-plans">
+            <div className="lp-plan">
+              <h3>Free pilot</h3>
+              <p className="lp-plan-price">£0</p>
+              <ul>
+                <li>60 minutes of practice over 14 days</li>
+                <li>Up to 5 reps and unlimited managers</li>
+                <li>Your own rules, scenarios and feedback</li>
+                <li>No card needed. It never becomes a paid plan by itself.</li>
+              </ul>
+              {demo ? <p className="lp-fine">Available on the live PitchReady site.</p>
+                : ctx?.pilotsOpen && !user ? <Link to={PILOT_LINK} className="lp-btn lp-btn-main">Start a free pilot</Link>
+                : <Link to="/contact" className="lp-btn lp-btn-main">Ask for a pilot</Link>}
+            </div>
+            <div className="lp-plan">
+              <h3>Team plan</h3>
+              <p className="lp-plan-price">Priced for your team</p>
+              <ul>
+                <li>Practice minutes sized to your team, renewed every month</li>
+                <li>3, 5 or 10-minute sessions, by voice or typing</li>
+                <li>Manager overview, trends, email alerts and data download</li>
+                <li>Cancel any time; it stops at the end of the month you’ve paid for</li>
+              </ul>
+              <Link to="/contact" className="lp-btn lp-btn-alt">Get a price</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="lp-faq" aria-labelledby="lp-faq-title">
         <div className="lp-wrap lp-narrow">
           <h2 id="lp-faq-title" className="lp-h2">Questions</h2>
@@ -273,7 +312,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <CtaBand title="Ready to give your team more practice?" demo={demo} signedIn={!!user} extra={primaryCtas} />
+      <CtaBand title="Ready to give your team more practice?" demo={demo} signedIn={!!user} extra={primaryCtas} pilots={!!ctx?.pilotsOpen} />
       <SiteFooter />
     </div>
   );

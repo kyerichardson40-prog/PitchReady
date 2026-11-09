@@ -4,15 +4,17 @@ import { open } from '../../../server/guard.ts';
 import { authenticate } from '../../../server/auth.ts';
 import { getDb } from '../../../server/db.ts';
 import { getConfig } from '../../../server/config.ts';
-import { json } from '../../../server/http.ts';
+import { json, readJson } from '../../../server/http.ts';
+import { authed } from '../../../server/guard.ts';
+import { z } from 'zod';
 
 /** Context for the signed-in user (or user: null). Server-side only data; no secrets. */
 export const GET = open(async (req, { rid }) => {
   const auth = await authenticate(req);
   const cfg = getConfig();
-  const base = { mode: 'connected', voice: { stt: cfg.voice.stt, tts: cfg.voice.tts, deviceVoice: false }, liveAi: cfg.liveAi, scenarios: [] };
+  const base = { mode: 'connected', voice: { stt: cfg.voice.stt, tts: cfg.voice.tts, deviceVoice: false }, liveAi: cfg.liveAi, scenarios: [], pilotsOpen: cfg.env.SELF_SERVE_PILOTS === 'true' };
   if (!auth.user) {
-    const res = json({ ...base, user: null, membershipActive: false, agencyName: null, campaign: null, rubricVersion: null, usage: null, retentionDays: null }, { requestId: rid });
+    const res = json({ ...base, user: null, membershipActive: false, agencyName: null, campaign: null, rubricVersion: null, usage: null, retentionDays: null, emailNotifications: null, hasTeam: false, canStartPilot: false }, { requestId: rid });
     auth.setCookies.forEach((c) => res.headers.append('set-cookie', c));
     return res;
   }
@@ -33,7 +35,18 @@ export const GET = open(async (req, { rid }) => {
     scenarios: c?.scenarios ?? [],
     usage: c?.usage ?? null,
     retentionDays: c?.agency?.retentionDays ?? null,
+    emailNotifications: c?.agency?.emailNotifications ?? null,
+    hasTeam: !!m,
+    canStartPilot: !m && cfg.env.SELF_SERVE_PILOTS === 'true',
+    emailConfirmed: auth.user.emailConfirmed,
   }, { requestId: rid });
   auth.setCookies.forEach((x) => res.headers.append('set-cookie', x));
   return res;
 });
+
+/** Change your own display name. */
+const nameInput = z.object({ name: z.string().trim().min(1).max(80) }).strict();
+export const PUT = authed(async (req, { user }) => {
+  const { name } = await readJson(req, nameInput);
+  return getDb().user(user.accessToken, user.id).rpc('update_profile', { display_name: name });
+}, { rate: { name: 'profile', perMinute: 10 } });

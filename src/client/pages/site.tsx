@@ -35,13 +35,14 @@ export function SiteFooter() {
   );
 }
 
-export function CtaBand({ title, demo, signedIn, extra }: { title: string; demo?: boolean; signedIn?: boolean; extra?: ReactNode }) {
+export function CtaBand({ title, demo, signedIn, extra, pilots }: { title: string; demo?: boolean; signedIn?: boolean; extra?: ReactNode; pilots?: boolean }) {
   return (
     <section className="lp-close" aria-label={title}>
       <h2 className="lp-close-title">{title}</h2>
       {demo || signedIn ? extra : (
         <div className="lp-ctas">
-          <Link to="/contact" className="lp-btn lp-btn-main">Contact us</Link>
+          {pilots && <Link to={`/login?signup=1&next=${encodeURIComponent('/start')}`} className="lp-btn lp-btn-main">Start a free pilot</Link>}
+          <Link to="/contact" className={`lp-btn ${pilots ? 'lp-btn-alt' : 'lp-btn-main'}`}>Contact us</Link>
           <Link to="/login" className="lp-btn lp-btn-quiet">Sign in</Link>
         </div>
       )}
@@ -384,9 +385,10 @@ export function TermsPage() {
             <li><strong>Supabase</strong>: database and sign-in, stored in the EU (Ireland).</li>
             <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback (United States).</li>
             <li><strong>Deepgram</strong>: speech-to-text and reading the customer’s lines aloud (United States).</li>
+            <li><strong>Resend</strong>: sending invitation emails and manager alerts (United States).</li>
           </ul>
           <p><strong>Audio:</strong> when a user speaks during practice, the recording is sent to Deepgram to be turned into text and is not stored by PitchReady. Every request to Deepgram opts out of its model improvement programme, so Deepgram keeps the audio only as long as needed to process the request and does not use it to train its models. The customer’s spoken lines are generated from text by Deepgram and are not stored by PitchReady. Users can type instead of speaking.</p>
-          <p><strong>Practice transcripts and feedback:</strong> deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days agreed in your order. Users can ask for their own practice data to be deleted from their Settings page. Deleted data in backups will be put beyond ordinary use and removed in accordance with the backup-deletion schedule in the DPA. Any restore must preserve applicable deletion instructions.</p>
+          <p><strong>Practice transcripts and feedback:</strong> deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days that your managers choose in Team settings. Users can ask for their own practice data to be deleted from their Settings page. Deleted data in backups will be put beyond ordinary use and removed in accordance with the backup-deletion schedule in the DPA. Any restore must preserve applicable deletion instructions.</p>
           <p>At the end of the service, we will return or delete personal data at your choice in accordance with the DPA, including its export procedure and deletion deadlines. We may retain data where law requires it, subject to appropriate protection and restricted use.</p>
           <p>Our <Link to="/privacy">privacy notice</Link> separately explains personal data for which we act as controller, such as business contact and billing information. The privacy notice does not replace the DPA.</p>
 
@@ -491,7 +493,7 @@ export function DpaPage() {
           <p>Taking into account the nature of the processing and the information available to us, we will give you reasonable help with your security obligations, data protection impact assessments, and any prior consultation with the Information Commissioner’s Office relating to PitchReady.</p>
 
           <h2>11. Keeping, returning and deleting data</h2>
-          <p><strong>During the agreement:</strong> practice sessions, including transcripts, feedback, review notes and corrections, are deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days agreed in your order. Deletion requests from reps are carried out automatically.</p>
+          <p><strong>During the agreement:</strong> practice sessions, including transcripts, feedback, review notes and corrections, are deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days that your managers choose in Team settings. Deletion requests from reps are carried out automatically.</p>
           <p><strong>At the end:</strong> managers can download their team’s data at any time before the agreement ends, and for 30 days afterwards we will provide an export on request. We will then delete the remaining customer personal data, including user accounts, within 60 days after the agreement ends, unless the law requires us to keep it.</p>
           <p><strong>What we keep:</strong> records of practice time used (with no conversation content), and security and audit records of actions taken in the service, which we keep for billing, accounting and security purposes for as long as the law requires or allows, protected and used only for those purposes.</p>
           <p><strong>Backups:</strong> we do not currently keep restorable backups of customer personal data. Our database provider may keep its own short-term backups for disaster recovery, which we cannot access. If we add restorable backups, they will be kept for no more than 7 days, so deleted data drops out of them within 7 days; until then it is put beyond ordinary use. If a backup is ever restored, earlier deletions will be applied again.</p>
@@ -516,6 +518,7 @@ export function DpaPage() {
                 <tr><td className="rt-main"><strong>Supabase</strong></td><td data-label="What it does">Database and sign-in</td><td data-label="Data">All stored customer personal data</td><td data-label="Location">EU (Ireland)</td></tr>
                 <tr><td className="rt-main"><strong>Anthropic</strong></td><td data-label="What it does">AI that plays the customer and writes feedback</td><td data-label="Data">Practice transcripts and the campaign material needed to respond and give feedback</td><td data-label="Location">United States</td></tr>
                 <tr><td className="rt-main"><strong>Deepgram</strong></td><td data-label="What it does">Speech-to-text, and reading the customer’s lines aloud</td><td data-label="Data">Voice recordings of practice turns, and the customer’s lines as text. Every request opts out of Deepgram’s model improvement programme, so recordings are kept only as long as needed to process them and are not used for training.</td><td data-label="Location">United States</td></tr>
+                <tr><td className="rt-main"><strong>Resend</strong></td><td data-label="What it does">Sends emails for the service</td><td data-label="Data">Email addresses of invited people and managers; the team name; in manager alerts, reps’ names and the titles of their flagged sessions (never transcripts)</td><td data-label="Location">United States</td></tr>
               </tbody>
             </table>
           </div>
@@ -524,7 +527,7 @@ export function DpaPage() {
           <ul>
             <li><strong>Encryption:</strong> all connections use HTTPS. Data is stored with our database provider, which encrypts it at rest.</li>
             <li><strong>Separation between customers:</strong> database row-level security means each organisation can only reach its own data. Reps can only see their own practice; managers can only see their own team’s.</li>
-            <li><strong>Sign-in:</strong> passwords are handled by our database provider’s sign-in service and stored hashed, never in plain text. Sign-in cookies are HTTP-only, secure and same-site. Accounts are by invitation only.</li>
+            <li><strong>Sign-in:</strong> passwords are handled by our database provider’s sign-in service and stored hashed, never in plain text. Sign-in cookies are HTTP-only, secure and same-site. New team members join by a single-use invitation tied to their email address.</li>
             <li><strong>Abuse protection:</strong> rate limits on sign-in, sign-up, the contact form and practice; strict content security policy and security headers; requests from other websites are rejected.</li>
             <li><strong>Keys and secrets:</strong> keys for the AI and speech providers are kept on the server and never sent to browsers.</li>
             <li><strong>Data minimisation:</strong> voice recordings are not stored by PitchReady; practice data is deleted automatically after the retention period; deletion requests are carried out automatically.</li>
@@ -580,7 +583,7 @@ export function PrivacyPage() {
             <li><strong>Supabase</strong>: database and sign-in (data stored in the EU, in Ireland).</li>
             <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback.</li>
             <li><strong>Deepgram</strong>: turning speech into text and reading the customer’s lines aloud.</li>
-            <li><strong>Resend</strong>: sending us an email when you use the contact form.</li>
+            <li><strong>Resend</strong>: sending emails, such as contact-form messages to us, team invitations, and alerts and weekly summaries to managers.</li>
           </ul>
           <p>Some of these providers are based in, or may process data in, the United States. Where personal data leaves the UK, we rely on the safeguards UK data protection law requires. We never sell personal data, and we don’t use it for advertising.</p>
 

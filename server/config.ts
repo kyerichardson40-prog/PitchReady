@@ -39,6 +39,10 @@ const envSchema = z.object({
   AI_BUDGET_CURRENCY: optional,
   PROVIDER_RATE_CARD_PATH: optional,
   MAINTENANCE_SECRET: optional,
+  /** Free pilots that people start themselves. Off with SELF_SERVE_PILOTS=false. */
+  SELF_SERVE_PILOTS: z.enum(['true', 'false']).default('true'),
+  SELF_SERVE_PILOT_SECONDS: intOpt,
+  SELF_SERVE_PILOT_DAYS: intOpt,
   /** Test-only: route DB calls through local psql instead of Supabase REST. Refused in production. */
   PITCHREADY_TEST_DB_URL: optional,
 });

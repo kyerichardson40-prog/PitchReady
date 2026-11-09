@@ -66,34 +66,102 @@ async function resendReason(res: Response): Promise<string> {
 }
 
 export type NotifyResult = 'sent' | 'skipped' | 'failed';
+type SendOpts = { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; timeoutMs?: number };
 
-export async function notifyContact(
-  f: ContactFields,
-  opts: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; timeoutMs?: number } = {},
-): Promise<NotifyResult> {
+/** True when the server has an email service key (emails to people other than the owner also need a verified sender domain). */
+export function emailConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  return !!clean(env.RESEND_API_KEY);
+}
+
+/**
+ * Sends one plain-text email through Resend. Best effort: returns 'failed' rather than throwing,
+ * and logs only the status and Resend's reason (never the key, addresses or content).
+ */
+export async function sendEmail(msg: { to: string[]; subject: string; text: string; replyTo?: string; tag: string }, opts: SendOpts = {}): Promise<NotifyResult> {
   const env = opts.env ?? process.env;
   const key = clean(env.RESEND_API_KEY);
-  const to = clean(env.CONTACT_NOTIFY_EMAIL);
-  if (!key || !to) return 'skipped';
+  const to = msg.to.map((x) => x.trim()).filter(Boolean);
+  if (!key || to.length === 0) return 'skipped';
   const from = clean(env.CONTACT_FROM_EMAIL) || DEFAULT_FROM;
-  const { subject, text } = contactEmail(f);
   const doFetch = opts.fetchImpl ?? fetch;
   try {
     const res = await doFetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: to.split(',').map((s) => s.trim()).filter(Boolean), reply_to: f.email, subject, text }),
+      body: JSON.stringify({ from, to, ...(msg.replyTo ? { reply_to: msg.replyTo } : {}), subject: oneLine(msg.subject, 160), text: msg.text }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
     });
     if (!res.ok) {
-      // Log the status and Resend's reason: never the key, and never the visitor's details.
       const reason = await resendReason(res);
-      console.error(`[contact] notification email failed: HTTP ${res.status}${reason ? ` (${reason})` : ''}`);
+      console.error(`[${msg.tag}] notification email failed: HTTP ${res.status}${reason ? ` (${reason})` : ''}`);
       return 'failed';
     }
     return 'sent';
   } catch (e) {
-    console.error(`[contact] notification email failed: ${(e as Error).name}`);
+    console.error(`[${msg.tag}] notification email failed: ${(e as Error).name}`);
     return 'failed';
   }
+}
+
+export async function notifyContact(f: ContactFields, opts: SendOpts = {}): Promise<NotifyResult> {
+  const to = clean((opts.env ?? process.env).CONTACT_NOTIFY_EMAIL);
+  if (!to) return 'skipped';
+  const { subject, text } = contactEmail(f);
+  return sendEmail({ to: to.split(','), subject, text, replyTo: f.email, tag: 'contact' }, opts);
+}
+
+/** Tells the owner that someone started a free pilot (goes to CONTACT_NOTIFY_EMAIL). */
+export async function notifyOwner(subject: string, lines: string[], opts: SendOpts = {}): Promise<NotifyResult> {
+  const to = clean((opts.env ?? process.env).CONTACT_NOTIFY_EMAIL);
+  if (!to) return 'skipped';
+  return sendEmail({ to: to.split(','), subject, text: lines.join('\n'), tag: 'owner' }, opts);
+}
+
+export function invitationEmail(i: { agencyName: string; inviterName: string; role: 'rep' | 'manager'; link: string; expiresAt: string }): { subject: string; text: string } {
+  const team = oneLine(i.agencyName, 80) || 'a team';
+  return {
+    subject: `You're invited to join ${team} on PitchReady`,
+    text: [
+      `${oneLine(i.inviterName, 80) || 'Your manager'} has invited you to join ${team} on PitchReady as a ${i.role === 'manager' ? 'manager' : 'sales rep'}.`,
+      '',
+      'PitchReady lets you practise sales conversations with an AI customer and get feedback on what you said.',
+      '',
+      'To accept, open this link and sign in or create an account with this email address:',
+      i.link,
+      '',
+      `The link works once and expires on ${new Date(i.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+      "If you weren't expecting this, you can ignore this email.",
+    ].join('\n'),
+  };
+}
+
+export interface ManagerNotification {
+  agencyName: string; managers: string[];
+  flagged: { sessionId: string; repName: string; scenarioTitle: string; concerns: number }[];
+  digest: { sessions: number; reps: number; activeReps: number; averageScore: number | null; flagged: number } | null;
+}
+
+/** One email per team: newly flagged sessions and/or the weekly summary. */
+export function managerEmail(n: ManagerNotification, baseUrl: string): { subject: string; text: string } {
+  const team = oneLine(n.agencyName, 80);
+  const lines: string[] = [];
+  if (n.digest) {
+    const d = n.digest;
+    lines.push(`Your team's last 7 days on PitchReady (${team}):`, '',
+      `- ${d.sessions} practice session${d.sessions === 1 ? '' : 's'}`,
+      `- ${d.reps} of ${d.activeReps} rep${d.activeReps === 1 ? '' : 's'} practised`,
+      ...(d.averageScore === null ? [] : [`- Average score: ${d.averageScore} out of 5`]),
+      `- ${d.flagged} session${d.flagged === 1 ? '' : 's'} flagged for review`, '');
+  }
+  if (n.flagged.length) {
+    lines.push(n.digest ? 'Newly flagged for review:' : `Flagged for your review (${team}):`, '');
+    for (const f of n.flagged) lines.push(`- ${oneLine(f.repName, 60)} · ${oneLine(f.scenarioTitle, 80)} (${f.concerns} concern${f.concerns === 1 ? '' : 's'})`, `  ${baseUrl}/manager/sessions/${f.sessionId}`);
+    lines.push('');
+  }
+  lines.push(`Open your team overview: ${baseUrl}/manager`, '', 'Feedback is coaching, not a certification or an employment decision.',
+    'To stop these emails, turn them off under Team → Team settings.');
+  const subject = n.digest
+    ? `PitchReady weekly summary: ${n.digest.sessions} session${n.digest.sessions === 1 ? '' : 's'}`
+    : `PitchReady: ${n.flagged.length} session${n.flagged.length === 1 ? '' : 's'} flagged for review`;
+  return { subject, text: lines.join('\n') };
 }

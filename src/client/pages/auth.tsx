@@ -11,7 +11,7 @@ export function LoginPage() {
   const { search } = useLocation();
   const qs = new URLSearchParams(search);
   const next = qs.get('next') ?? '';
-  const [mode, setMode] = useState<'in' | 'up'>(qs.get('signup') ? 'up' : 'in');
+  const [mode, setMode] = useState<'in' | 'up' | 'forgot'>(qs.get('signup') ? 'up' : 'in');
   const [email, setEmail] = useState(qs.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -31,7 +31,12 @@ export function LoginPage() {
     const at = h.get('access_token'), rt = h.get('refresh_token');
     if (at && rt) {
       setBusy(true);
-      auth.adoptSession(at, rt).then(async () => { await refresh(); setInfo('Email confirmed. You are signed in.'); navigate(next || '/practice', { replace: true }); })
+      const recovery = h.get('type') === 'recovery';
+      auth.adoptSession(at, rt).then(async () => {
+        await refresh();
+        if (recovery) { navigate('/settings?reset=1', { replace: true }); return; }
+        setInfo('Email confirmed. You are signed in.'); navigate(next || '/practice', { replace: true });
+      })
         .catch((e) => setErr(e.message)).finally(() => setBusy(false));
     }
   }, [repo.mode, refresh, next, navigate]);
@@ -42,6 +47,7 @@ export function LoginPage() {
       <div className="stack">
         <h1>You’re signed in</h1>
         <p>{ctx.user.email}</p>
+        {!ctx.hasTeam && ctx.canStartPilot && <div className="alert info">You’re not in a team yet. <Link to="/start">Start a free pilot for your team</Link>, or open the invitation link your manager sent you.</div>}
         <div className="row">
           <button className="btn primary" onClick={() => navigate(next || (ctx.user!.role === 'manager' ? '/manager' : '/practice'))}>Continue</button>
           <button className="btn" onClick={async () => { await auth.signOut(); await refresh(); setInfo('You have signed out.'); }}>Sign out</button>
@@ -51,23 +57,30 @@ export function LoginPage() {
   }
   return (
     <div className="stack" style={{ maxWidth: 440 }}>
-      <h1>{mode === 'in' ? 'Sign in' : 'Create your account'}</h1>
+      <h1>{mode === 'in' ? 'Sign in' : mode === 'up' ? 'Create your account' : 'Reset your password'}</h1>
       {info && <div className="alert info" role="status">{info}</div>}
       {err && <ErrorBox message={err} />}
       <form className="card" onSubmit={async (e) => {
         e.preventDefault(); setBusy(true); setErr(null); setInfo(null);
         try {
           if (mode === 'in') { await auth.signIn(email, password); await refresh(); navigate(next || '/practice'); }
+          else if (mode === 'forgot') {
+            await auth.forgotPassword(email);
+            setInfo('If there’s an account for that email, we’ve sent a link to reset the password. It can take a few minutes; check your spam folder too.');
+          }
           else {
             const r = await auth.signUp(email, password);
-            if (r.confirmationRequired) setInfo('Check your email for a confirmation link. After confirming, come back and open your invitation link again.');
+            if (r.confirmationRequired) setInfo('Check your email for a confirmation link. After confirming, you’ll be signed in. If you were invited, open your invitation link again.');
             else { await refresh(); navigate(next || '/practice'); }
           }
         } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
       }}>
         <div className="field"><label htmlFor="email">Email</label><input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        {mode === 'forgot' ? <p className="small muted">Enter the email you signed up with and we’ll send you a link to choose a new password.</p> : (
         <div className="field"><label htmlFor="pw">Password</label><input id="pw" type="password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} minLength={mode === 'up' ? 10 : 1} required value={password} onChange={(e) => setPassword(e.target.value)} />
-          {mode === 'up' && <p className="hint">At least 10 characters.</p>}</div>
+          {mode === 'up' && <p className="hint">At least 10 characters.</p>}
+          {mode === 'in' && <p className="hint"><button type="button" className="btn link" onClick={() => { setMode('forgot'); setErr(null); setInfo(null); }}>Forgot your password?</button></p>}</div>
+        )}
         {mode === 'up' && (
           <div className="field">
             <label className="check">
@@ -76,10 +89,42 @@ export function LoginPage() {
             </label>
           </div>
         )}
-        <button className="btn primary" type="submit" disabled={busy} style={{ width: '100%' }}>{busy ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}</button>
+        <button className="btn primary" type="submit" disabled={busy} style={{ width: '100%' }}>{busy ? 'Please wait…' : mode === 'in' ? 'Sign in' : mode === 'up' ? 'Create account' : 'Send reset link'}</button>
       </form>
-      <p className="small">{mode === 'in' ? <>Invited but no account yet? <button className="btn link" onClick={() => setMode('up')}>Create an account</button></> : <>Already have an account? <button className="btn link" onClick={() => setMode('in')}>Sign in</button></>}</p>
-      <p className="small muted">Accounts are for invited agency members only. Public sign-up does not grant access.</p>
+      <p className="small">{mode === 'in' ? <>No account yet? <button className="btn link" onClick={() => setMode('up')}>Create an account</button></> : <>{mode === 'up' ? 'Already have an account?' : 'Remembered it?'} <button className="btn link" onClick={() => setMode('in')}>Sign in</button></>}</p>
+      <p className="small muted">{ctx?.pilotsOpen ? 'Joining a team? Use the email address your invitation was sent to. Setting up your own team? Create an account, then start a free pilot.' : 'Accounts are for invited team members. Creating an account on its own does not give access.'}</p>
+    </div>
+  );
+}
+
+/** Start a free pilot: a signed-in person with no team creates one and becomes its manager. */
+export function StartPilotPage() {
+  const navigate = useNavigate();
+  const { repo, ctx, refresh } = useApp();
+  const [team, setTeam] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  if (!ctx?.user) return <Loading />;
+  if (repo.mode === 'demo') return <div className="stack narrow"><h1>Start a free pilot</h1><div className="alert info">This is the demo. On the live PitchReady site you can create your own team here.</div></div>;
+  if (ctx.hasTeam) return <div className="stack narrow"><h1>You’re already in a team</h1><p>{ctx.agencyName}</p><Link className="btn primary" to={ctx.user.role === 'manager' ? '/manager' : '/practice'}>Continue</Link></div>;
+  if (!ctx.canStartPilot) return <div className="stack narrow"><h1>Start a pilot</h1><p>New pilots are by arrangement at the moment. <Link to="/contact">Contact us</Link> and we’ll set your team up.</p></div>;
+  return (
+    <div className="stack narrow">
+      <h1>Start a free pilot</h1>
+      <p>Create your team and try PitchReady with up to 5 reps. You get 60 minutes of practice over 14 days, free. No card needed, and it never turns into a paid plan by itself.</p>
+      {err && <ErrorBox message={err} />}
+      <form className="card" onSubmit={async (e) => {
+        e.preventDefault(); setBusy(true); setErr(null);
+        try { await auth.startPilot(team.trim(), name.trim()); await refresh(); navigate('/manager'); }
+        catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+      }}>
+        <div className="field"><label htmlFor="team">Team or company name</label><input id="team" required minLength={2} maxLength={120} value={team} onChange={(e) => setTeam(e.target.value)} /></div>
+        <div className="field"><label htmlFor="yname">Your name</label><input id="yname" required maxLength={80} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+          <p className="hint">Shown to the reps you invite.</p></div>
+        <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Setting up…' : 'Create my team'}</button>
+      </form>
+      <p className="small muted">You’ll start with a fictional example campaign and five practice scenarios, which you can replace with your own under Rules &amp; campaign. By continuing you agree to the <Link to="/terms">Terms and conditions</Link> and <Link to="/dpa">Data processing agreement</Link>.</p>
     </div>
   );
 }

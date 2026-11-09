@@ -25,7 +25,7 @@ export interface PublishedVersion { version: number; pack: CampaignPack; rubric:
 export interface DemoState {
   stateVersion: number;
   seededAt: string;
-  agency: { id: string; name: string; retentionDays: number };
+  agency: { id: string; name: string; retentionDays: number; emailNotifications?: boolean };
   people: DemoPerson[];
   currentUserId: string;
   /** Simulated sign-in: the demo opens on the role picker until someone signs in. */
@@ -509,6 +509,21 @@ export function signIn(s: DemoState, userId: string) {
   s.signedIn = true;
 }
 export function signOut(s: DemoState) { s.signedIn = false; }
+
+/** Demo equivalents of the profile and team settings. */
+export function updateName(s: DemoState, name: string) {
+  const n = name.trim().replace(/\s+/g, ' ');
+  if (n.length < 1 || n.length > 80) throw new DemoError('invalid_input', 'Your name must be 1–80 characters.');
+  currentUser(s).name = n;
+}
+export function updateTeamSettings(s: DemoState, input: { retentionDays?: number; emailNotifications?: boolean }) {
+  requireManager(s);
+  if (input.retentionDays !== undefined) {
+    if (!Number.isInteger(input.retentionDays) || input.retentionDays < 1 || input.retentionDays > 365) throw new DemoError('invalid_input', 'Keep data for between 1 and 365 days.');
+    s.agency.retentionDays = input.retentionDays;
+  }
+  if (input.emailNotifications !== undefined) s.agency.emailNotifications = input.emailNotifications;
+}
 
 export function createInvitation(s: DemoState, input: { email: string; role: 'rep' | 'manager' }, now = new Date()): { invitation: DemoInvitation; link: string } {
   requireManager(s);

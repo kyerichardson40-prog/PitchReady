@@ -2,7 +2,10 @@
 import { CHANNEL_INFO } from '../../../lib/domain/sales.ts';
 import { useEffect, useState } from 'react';
 import { getDrill } from '../../../lib/content/scenarios.ts';
-import type { FeedbackReport } from '../../../lib/domain/types.ts';
+import type { FeedbackReport, PracticeSession } from '../../../lib/domain/types.ts';
+import { computeProgress, sessionScore } from '../../../lib/domain/progress.ts';
+import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
+import { auth } from '../repo/api-repo.ts';
 import { useApp, useAsync } from '../app-context.tsx';
 import { Link, useNavigate } from '../router.tsx';
 import { Empty, ErrorBox, FictionalTag, Loading, StatusTag, fmtDate, fmtMinutes, sessionTitle } from '../components/ui.tsx';
@@ -16,6 +19,17 @@ export function PracticePage() {
   const history = useAsync(() => repo.listMySessions(), [repo, ctx?.user?.id]);
   if (ctxError) return <ErrorBox message={ctxError} onRetry={refresh} />;
   if (!ctx) return <Loading />;
+  if (repo.mode === 'connected' && ctx.user && ctx.hasTeam === false) {
+    return (
+      <div className="stack narrow">
+        <h1>You’re not in a team yet</h1>
+        {ctx.canStartPilot
+          ? <div className="card"><h2>Setting up your own team?</h2><p>Start a free pilot: 60 minutes of practice over 14 days for up to 5 reps.</p><Link className="btn primary" to="/start">Start a free pilot</Link></div>
+          : <p>New teams are set up by arrangement. <Link to="/contact">Contact us</Link> to get started.</p>}
+        <div className="card"><h2>Joining your manager’s team?</h2><p>Open the invitation link they sent you. It only works with the email address it was sent to ({ctx.user.email}).</p></div>
+      </div>
+    );
+  }
   if (ctx.user?.role !== 'rep') return <ErrorBox message="Practice is available in the rep view." />;
   if (!ctx.membershipActive) return <ErrorBox message="Your membership is not active. Ask your manager if you think this is a mistake." />;
   if (!ctx.campaign) return <Empty>Your agency has not published a campaign yet. Ask your manager to publish one.</Empty>;
@@ -56,6 +70,7 @@ export function PracticePage() {
       </div>
       {active && <div className="alert warn">You have a practice in progress. <Link to={`/sessions/${active.id}`}>Open it</Link> or let it time out.</div>}
       {remaining !== null && remaining < (ctx.campaign?.practiceMinutes ?? 3) * 60 && <div className="alert warn">Not enough team allowance left to start a full {ctx.campaign?.practiceMinutes ?? 3}-minute session. Speak to your manager.</div>}
+      {history.data && <ProgressCard sessions={history.data} />}
       <h2>Choose a scenario</h2>
       <ul className="door-list">
         {ctx.scenarios.map((s, i) => (
@@ -198,14 +213,16 @@ export function HistoryPage() {
   return (
     <div className="stack">
       <h1>Your practice history</h1>
+      {q.data && <ProgressCard sessions={q.data} />}
       {q.loading ? <Loading /> : q.error ? <ErrorBox message={q.error} onRetry={q.reload} /> : !q.data?.length ? <Empty>No sessions yet.</Empty> : (
         <div className="card table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Practice</th><th>Campaign / rubric</th><th>Status</th></tr></thead>
+            <thead><tr><th>Date</th><th>Practice</th><th>Score</th><th>Campaign / rubric</th><th>Status</th></tr></thead>
             <tbody>{q.data.map((s) => (
               <tr key={s.id}>
                 <td>{fmtDate(s.startedAt)}</td>
                 <td><Link to={`/sessions/${s.id}`}>{sessionTitle(s)}</Link></td>
+                <td>{sessionScore(s)?.toFixed(1) ?? <span className="muted">–</span>}</td>
                 <td className="small">v{s.campaignVersion} · {s.rubricVersion}</td>
                 <td><StatusTag s={s} /></td>
               </tr>
@@ -227,23 +244,25 @@ export function SettingsPage() {
       <h1>Settings</h1>
       <div className="card">
         <h2>Profile</h2>
-        <p><strong>{ctx.user.name}</strong><br /><span className="muted">{ctx.user.email}</span></p>
-        <p className="small">Role: {ctx.user.role} at {ctx.agencyName}{ctx.membershipActive ? '' : ' (inactive)'}</p>
+        <p className="muted">{ctx.user.email}</p>
+        <NameForm />
+        {ctx.agencyName && <p className="small">Role: {ctx.user.role} at {ctx.agencyName}{ctx.membershipActive ? '' : ' (inactive)'}</p>}
       </div>
+      {repo.mode === 'connected' && <PasswordForm />}
       <div className="card">
         <h2>Who can see your practice</h2>
         <ul className="small">
           <li>Managers at {ctx.agencyName} can read your saved practice transcripts, feedback and any error reports you send.</li>
           <li>Other reps cannot see your transcripts.</li>
-          <li>Raw audio is not kept by this app by default. When voice is enabled, audio is sent to a speech provider to transcribe; the provider’s own data handling is configured and verified separately.</li>
-          <li>Transcripts and feedback are deleted after {ctx.retentionDays ?? 30} days (agency setting). Aggregate usage counts may be kept for billing.</li>
+          <li>Voice recordings are not kept. When you speak, the recording is sent to our speech provider to be turned into text, and the provider is told not to keep it or use it to train its models.</li>
+          <li>Transcripts and feedback are deleted after {ctx.retentionDays ?? 30} days (your team’s setting). Totals of practice time may be kept for billing.</li>
           <li>Feedback is coaching, not a compliance certificate or an employment decision.</li>
         </ul>
       </div>
       <div className="card">
         <h2>Request deletion</h2>
         {msg && <div className="alert info" role="status">{msg}</div>}
-        <form onSubmit={async (e) => { e.preventDefault(); await repo.requestDeletion({ scope }); setMsg('Request recorded. Your agency will action it; you’ll keep access until then.'); }}>
+        <form onSubmit={async (e) => { e.preventDefault(); await repo.requestDeletion({ scope }); setMsg('Request recorded. It is carried out automatically, usually within a few minutes.'); }}>
           <div className="field"><label htmlFor="scope">What should be deleted?</label>
             <select id="scope" value={scope} onChange={(e) => setScope(e.target.value as typeof scope)}>
               <option value="my_transcripts">My practice transcripts and feedback</option>
@@ -259,6 +278,88 @@ export function SettingsPage() {
           <button className="btn danger" onClick={async () => { await repo.demoReset!(); await refresh(); setMsg('Demo data reset to the fictional seed.'); }}>Reset demo data</button>
         </div>
       )}
+    </div>
+  );
+}
+
+const SKILL_LABEL: Record<string, string> = Object.fromEntries(DEMO_RUBRIC.dimensions.map((d) => [d.key, d.label]));
+
+/** The rep's own progress: recent average and trend, streak, best session and skills. */
+export function ProgressCard({ sessions }: { sessions: PracticeSession[] }) {
+  const p = computeProgress(sessions, new Date(), sessionTitle);
+  if (p.scored === 0) return null;
+  const change = p.average !== null && p.previousAverage !== null ? Math.round((p.average - p.previousAverage) * 10) / 10 : null;
+  const W = 14, H = 44;
+  return (
+    <section className="card progress-card" aria-labelledby="progress-title">
+      <h2 id="progress-title">Your progress</h2>
+      <div className="progress-stats">
+        <div className="progress-stat"><span className="progress-num">{p.average?.toFixed(1)}<small> / 5</small></span><span className="small muted">Average, last {Math.min(5, p.scored)} session{p.scored === 1 ? '' : 's'}</span>
+          {change !== null && <span className={`tag ${change > 0 ? 'teal' : ''}`}>{change > 0 ? `Up ${change.toFixed(1)}` : change < 0 ? `Down ${Math.abs(change).toFixed(1)}` : 'Level'} on the 5 before</span>}</div>
+        <div className="progress-stat"><span className="progress-num">{p.streakDays}<small> day{p.streakDays === 1 ? '' : 's'}</small></span><span className="small muted">{p.streakDays === 0 ? 'Practise today to start a streak' : p.practisedToday ? 'Streak: practised today' : 'Streak: practise today to keep it'}</span></div>
+        {p.best && <div className="progress-stat"><span className="progress-num">{p.best.score.toFixed(1)}<small> best</small></span><Link className="small" to={`/sessions/${p.best.id}`}>{p.best.title}</Link></div>}
+      </div>
+      {p.recent.length >= 2 && (
+        <figure className="progress-chart">
+          <svg viewBox={`0 0 ${p.recent.length * W} ${H}`} width={p.recent.length * W * 1.6} height={H * 1.6} role="img" aria-label={`Scores for your last ${p.recent.length} sessions, oldest first: ${p.recent.map((r) => r.score.toFixed(1)).join(', ')}`}>
+            {p.recent.map((r, i) => { const h = Math.max(3, (r.score / 5) * (H - 2)); return <rect key={r.id} x={i * W + 2} y={H - h} width={W - 4} height={h} rx="2" className={i === p.recent.length - 1 ? 'progress-bar latest' : 'progress-bar'} />; })}
+          </svg>
+          <figcaption className="small muted">Last {p.recent.length} scored sessions, oldest to newest</figcaption>
+        </figure>
+      )}
+      <dl className="progress-skills">
+        {p.skills.filter((k) => k.average !== null).map((k) => (
+          <div key={k.key} className="progress-skill">
+            <dt>{SKILL_LABEL[k.key] ?? k.key}</dt>
+            <dd><strong>{k.average!.toFixed(1)}</strong>{k.previous !== null && k.average !== k.previous && <span className="small muted"> ({k.average! > k.previous ? 'up' : 'down'} from {k.previous.toFixed(1)})</span>}
+              <span className="bar" aria-hidden="true"><svg viewBox="0 0 100 10" preserveAspectRatio="none" width="100%" height="10"><rect width={k.average! * 20} height="10" className="progress-bar" /></svg></span></dd>
+          </div>
+        ))}
+      </dl>
+      <p className="small muted m0">Based on the sessions still kept for you; older ones are deleted. Scores are coaching, not a grade.</p>
+    </section>
+  );
+}
+
+function NameForm() {
+  const { repo, ctx, refresh } = useApp();
+  const [name, setName] = useState(ctx?.user?.name ?? '');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <form onSubmit={async (e) => { e.preventDefault(); setMsg(null); setErr(null); try { await repo.updateName(name.trim()); await refresh(); setMsg('Name saved.'); } catch (e: any) { setErr(e.message); } }}>
+      {err && <ErrorBox message={err} />}
+      <div className="field"><label htmlFor="set-name">Your name</label><input id="set-name" required maxLength={80} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+        <p className="hint">Shown to your manager and on your practice history.</p></div>
+      <div className="row"><button className="btn" type="submit" disabled={!name.trim() || name.trim() === ctx?.user?.name}>Save name</button>{msg && <span className="small" role="status">{msg}</span>}</div>
+    </form>
+  );
+}
+
+function PasswordForm() {
+  const [recovery, setRecovery] = useState(false);
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const fromLink = typeof location !== 'undefined' && new URLSearchParams(location.search).has('reset');
+  useEffect(() => { auth.passwordStatus().then((r) => setRecovery(r.recovery)).catch(() => {}); }, []);
+  return (
+    <div className="card" id="password">
+      <h2>{recovery && fromLink ? 'Choose a new password' : 'Change password'}</h2>
+      {recovery && fromLink && <div className="alert info">You came from a password-reset link. Choose a new password below.</div>}
+      {err && <ErrorBox message={err} />}
+      {msg && <div className="alert info" role="status">{msg}</div>}
+      <form onSubmit={async (e) => {
+        e.preventDefault(); setBusy(true); setErr(null); setMsg(null);
+        try { await auth.changePassword(next, recovery ? undefined : current); setCurrent(''); setNext(''); setRecovery(false); setMsg('Password changed.'); }
+        catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+      }}>
+        {!recovery && <div className="field"><label htmlFor="pw-cur">Current password</label><input id="pw-cur" type="password" autoComplete="current-password" required value={current} onChange={(e) => setCurrent(e.target.value)} /></div>}
+        <div className="field"><label htmlFor="pw-new">New password</label><input id="pw-new" type="password" autoComplete="new-password" required minLength={10} value={next} onChange={(e) => setNext(e.target.value)} /><p className="hint">At least 10 characters.</p></div>
+        <button className="btn" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Change password'}</button>
+      </form>
     </div>
   );
 }

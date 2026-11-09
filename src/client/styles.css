@@ -767,3 +767,34 @@ mark.todo { background: #fdf0c2; color: var(--ink, #14213D); padding: 0 0.25em; 
 /* Practice clock paused while the AI prepares a reply. */
 .timer.paused { opacity: 0.85; gap: 0.45rem; }
 .timer-paused { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: rgba(255,255,255,0.18); border-radius: 999px; padding: 0.1rem 0.45rem; }
+
+/* Rep progress card. */
+.progress-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 0.75rem; }
+.progress-stat { display: flex; flex-direction: column; gap: 0.2rem; align-items: flex-start; }
+.progress-num { font-size: 1.9rem; font-weight: 800; line-height: 1; color: var(--ink); }
+.progress-num small { font-size: 0.9rem; font-weight: 600; color: var(--muted, #5b6478); }
+.progress-chart { margin: 0.25rem 0 0.75rem; }
+.progress-chart svg { max-width: 100%; height: auto; display: block; }
+.progress-bar { fill: var(--paint-teal, #0f766e); opacity: 0.55; }
+.progress-bar.latest { opacity: 1; }
+.progress-skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.6rem 1.25rem; margin: 0 0 0.75rem; }
+.progress-skill dt { font-weight: 600; font-size: 0.9rem; }
+.progress-skill dd { margin: 0; }
+.progress-skill .bar { display: block; margin-top: 0.25rem; }
+.progress-skill .bar svg { display: block; }
+.progress-skill .bar .progress-bar { opacity: 1; }
+
+/* Manager four-week trend. */
+.trend-cell { display: inline-flex; align-items: center; gap: 0.5rem; }
+.trend-bar { width: 90px; height: 8px; }
+.trend-bar rect { fill: var(--paint-teal, #0f766e); }
+
+/* Landing: plans. */
+.lp-pricing { padding: 3.5rem 1.25rem; background: #fff; }
+.lp-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
+.lp-plan { background: var(--pavement, #f3f5fa); border: 2px solid var(--ink); border-radius: 18px; padding: 1.5rem; box-shadow: 6px 6px 0 var(--paint-teal); display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.lp-plan + .lp-plan { box-shadow: 6px 6px 0 var(--paint-mustard); }
+.lp-plan h3 { margin: 0; font-family: var(--display); font-size: 1.35rem; }
+.lp-plan-price { font-family: var(--display); font-size: 1.9rem; font-weight: 800; margin: 0; }
+.lp-plan ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; flex: 1; }
+.lp-plan li { margin: 0.3rem 0; }

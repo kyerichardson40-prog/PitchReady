@@ -36,6 +36,36 @@ export interface ManagerOverview {
   rubricVersion: string;
   breakdown: DimensionBreakdown[];
   excludedOtherRubric: { version: string; sessions: number }[];
+  /** The last four 7-day windows, oldest first (independent of the chosen period). */
+  trend: WeekTrend[];
+}
+
+export interface WeekTrend {
+  /** 0 = the last 7 days, 1 = the 7 days before that, … */
+  weeksAgo: number;
+  sessions: number;
+  reps: number;
+  /** Mean of all observed scores on the current rubric; null when there are fewer than MIN_SAMPLE sessions. */
+  mean: number | null;
+}
+
+export function computeTrend(opts: { sessions: SessionSummary[]; activeRepIds: string[]; now: Date; currentRubricVersion: string }): WeekTrend[] {
+  const active = new Set(opts.activeRepIds);
+  const out: WeekTrend[] = [];
+  for (let w = 3; w >= 0; w--) {
+    const to = opts.now.getTime() - w * 7 * 86400_000;
+    const from = to - 7 * 86400_000;
+    const inWeek = opts.sessions.filter((s) => s.endedAt && active.has(s.repId) && s.evaluationStatus === 'completed'
+      && new Date(s.endedAt).getTime() > from && new Date(s.endedAt).getTime() <= to);
+    const scores = inWeek.filter((s) => s.rubricVersion === opts.currentRubricVersion)
+      .flatMap((s) => Object.values(s.scores ?? {}).filter((v): v is number => typeof v === 'number'));
+    const scoredSessions = inWeek.filter((s) => s.rubricVersion === opts.currentRubricVersion).length;
+    out.push({
+      weeksAgo: w, sessions: inWeek.length, reps: new Set(inWeek.map((s) => s.repId)).size,
+      mean: scoredSessions >= MIN_SAMPLE && scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null,
+    });
+  }
+  return out;
 }
 
 /**
@@ -78,6 +108,7 @@ export function computeOverview(opts: {
     rubricVersion: opts.currentRubricVersion,
     breakdown,
     excludedOtherRubric: [...other.entries()].map(([version, sessions]) => ({ version, sessions })),
+    trend: computeTrend(opts),
   };
 }
 

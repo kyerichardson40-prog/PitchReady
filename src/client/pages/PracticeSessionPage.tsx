@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from '../router.tsx';
 import { RepoError, type TurnResult } from '../repo/types.ts';
 import { ErrorBox, FictionalTag } from '../components/ui.tsx';
 import { Transcript } from '../components/Transcript.tsx';
-import { MIC_STATE_TEXT, TurnRecorder, recordingSupported, type MicState } from '../voice/recorder.ts';
+import { HANDS_FREE_RECORDING_TEXT, MIC_STATE_TEXT, TurnRecorder, recordingSupported, type MicState } from '../voice/recorder.ts';
 
 export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   const navigate = useNavigate();
@@ -43,6 +43,12 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   const ending = useRef(false);
 
   const sttEnabled = ctx?.voice.stt ?? false;
+
+  // Hands-free: listen again after the customer speaks, and send when the rep stops talking.
+  const [handsFree, setHandsFreeState] = useState(() => { try { return localStorage.getItem('pr-handsfree') !== '0'; } catch { return true; } });
+  const handsFreeRef = useRef(handsFree);
+  const setHandsFree = (on: boolean) => { handsFreeRef.current = on; setHandsFreeState(on); try { localStorage.setItem('pr-handsfree', on ? '1' : '0'); } catch { /* private mode */ } };
+  const startListening = useRef<() => void>(() => {});
 
   // Release every media resource on unmount.
   useEffect(() => () => {
@@ -87,7 +93,11 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
       const el = audioEl.current ?? new Audio();
       audioEl.current = el;
       el.src = audioUrl.current;
-      el.onended = () => setMic((m) => (m === 'resident_speaking' ? (recorder.current?.hasStream ? 'ready' : 'not_requested') : m));
+      el.onended = () => {
+        setMic((m) => (m === 'resident_speaking' ? (recorder.current?.hasStream ? 'ready' : 'not_requested') : m));
+        // Short gap so the tail of the customer's voice isn't picked up.
+        if (handsFreeRef.current && recorder.current?.hasStream) setTimeout(() => startListening.current(), 250);
+      };
       setMic((m) => (m === 'permission_denied' || m === 'unsupported' ? m : 'resident_speaking'));
       try { await el.play(); setTapToPlay(null); }
       catch { setTapToPlay(newResident.text); setMic(recorder.current?.hasStream ? 'ready' : 'not_requested'); }
@@ -154,18 +164,37 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     setMic(res);
   };
 
+  const beginRecording = () => {
+    if (!recorder.current) return;
+    recorder.current.autoStopOnSilence = handsFreeRef.current;
+    recorder.current.onAutoStop = () => { void toggleRecordStop(true); };
+    try { recorder.current.start(); setMic('recording'); } catch { setMic('failed'); }
+  };
+  // Called after the customer finishes speaking (hands-free); only starts if the mic is idle.
+  startListening.current = () => { if (session?.status === 'active' && mic !== 'recording' && !busy && document.visibilityState === 'visible') beginRecording(); };
+
+  const skipCustomer = () => {
+    audioEl.current?.pause();
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
+    if (handsFreeRef.current && recorder.current?.hasStream) setTimeout(() => startListening.current(), 150);
+  };
+
   const toggleRecord = async () => {
     if (!session || !recorder.current) return;
     if (mic === 'ready') {
-      recorder.current.onAutoStop = () => { void toggleRecordStop(); };
-      try { recorder.current.start(); setMic('recording'); } catch { setMic('failed'); }
+      beginRecording();
     } else if (mic === 'recording') {
       await toggleRecordStop();
     }
   };
 
-  const toggleRecordStop = async () => {
+  const toggleRecordStop = async (auto = false) => {
     if (!session || !recorder.current) return;
+    // Hands-free and nothing was said before the time limit: don't send silence.
+    if (auto && recorder.current.autoStopOnSilence && !recorder.current.heardSpeech) {
+      await recorder.current.cancel(); setMic('ready'); setNotice('We didn’t hear anything, so nothing was sent. Tap to speak when you’re ready.'); return;
+    }
     const out = await recorder.current.stop();
     if (!out) { setMic('ready'); return; }
     if (out.blob.size > LIMITS.audioMaxBytes) { setMic('ready'); setError('That recording was too large to send. Please record a shorter turn, or type it.'); return; }
@@ -215,7 +244,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
           <p className="small muted">{customer.Label}: {drill ? `a ${customer.label}` : scenario.persona} · {customer.channel.short}. A good outcome can be a respectful ending — you don’t need to make the sale to score well.</p>
         </div>
         <div className="alert info">
-          <p style={{ margin: 0 }}><strong>Before you start:</strong> this is a simulated practice conversation. Your agency’s managers can review saved practice transcripts and feedback. This app does not keep raw audio by default{repo.mode === 'demo' ? '; in demo mode nothing leaves this browser' : ''}.</p>
+          <p style={{ margin: 0 }}><strong>Before you start:</strong> this is a simulated practice conversation. Your agency’s managers can review saved practice transcripts and feedback. Voice recordings are not kept{repo.mode === 'demo' ? '; in demo mode nothing leaves this browser' : ''}.</p>
         </div>
         <div className="card">
           <h2>Time and turns</h2>
@@ -255,7 +284,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
         <Transcript session={session} />
       </div>
       {tapToPlay && (
-        <div className="alert info"><button className="btn primary" onClick={() => { void audioEl.current?.play().then(() => setTapToPlay(null)).catch(() => {}); setMic('resident_speaking'); }}>Tap to hear the resident</button></div>
+        <div className="alert info"><button className="btn primary" onClick={() => { void audioEl.current?.play().then(() => setTapToPlay(null)).catch(() => {}); setMic('resident_speaking'); }}>Tap to hear the {customer.label}</button></div>
       )}
       {notice && <div className="alert warn" role="status">{notice}</div>}
       {error && <ErrorBox message={error} />}
@@ -267,10 +296,14 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
             ) : mic === 'permission_denied' || mic === 'unsupported' || mic === 'requesting' ? null : (
               <button className={`btn primary mic-btn ${mic === 'recording' ? 'recording' : ''}`} onClick={toggleRecord}
                 disabled={busy || (mic !== 'ready' && mic !== 'recording')} aria-pressed={mic === 'recording'}>
-                {mic === 'recording' ? 'Stop and send' : 'Tap to speak'}
+                {mic === 'recording' ? (handsFree ? 'Send now' : 'Stop and send') : 'Tap to speak'}
               </button>
             )}
-            <p className="hint" role="status" aria-live="polite">{MIC_STATE_TEXT[mic]}</p>
+            {mic === 'resident_speaking' && <button type="button" className="btn" onClick={skipCustomer}>Skip to my reply</button>}
+            <p className="hint" role="status" aria-live="polite">{mic === 'recording' && handsFree ? HANDS_FREE_RECORDING_TEXT : MIC_STATE_TEXT[mic]}</p>
+            {mic !== 'permission_denied' && mic !== 'unsupported' && (
+              <label className="check small"><input type="checkbox" checked={handsFree} onChange={(e) => setHandsFree(e.target.checked)} /><span>Hands-free: listen after the {customer.label} speaks, and send when I stop talking</span></label>
+            )}
           </div>
         )}
         <form onSubmit={(e) => { e.preventDefault(); void sendTyped(); }}>

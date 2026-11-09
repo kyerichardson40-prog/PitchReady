@@ -25,7 +25,7 @@ async function speak(p: Providers, sessionId: string, text: string, opId: string
     const out = await metered(p, { sessionId, operationId: opId, operation: 'tts', model: p.tts.model, sizeHint: text.length }, () => p.tts!.speak({ text, operationId: opId }));
     return { base64: Buffer.from(out.audio).toString('base64'), mimeType: out.mimeType };
   } catch {
-    notices.push('Resident audio is unavailable right now; the reply is shown as text.');
+    notices.push('The customer’s voice is unavailable right now; the reply is shown as text.');
     return null;
   }
 }
@@ -114,7 +114,7 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
   // mid-session, fall back to the built-in copy or a neutral resident built from the session itself.
   const scenario: Scenario = (ctxData.scenarios as Scenario[] | undefined)?.find((x) => x.key === session.scenarioKey)
     ?? getScenario(session.scenarioKey)
-    ?? { key: session.scenarioKey, version: 1, title: session.scenarioTitle ?? session.scenarioKey, persona: 'A resident', opener: session.turns[0]?.text ?? '', objection: 'Not stated', goal: 'Have a short, respectful conversation.', allowedEnding: 'A courteous ending.', behaviour: 'Polite and brief.', skill: 'General' };
+    ?? { key: session.scenarioKey, version: 1, title: session.scenarioTitle ?? session.scenarioKey, persona: 'A customer', opener: session.turns[0]?.text ?? '', objection: 'Not stated', goal: 'Have a short, respectful conversation.', allowedEnding: 'A courteous ending.', behaviour: 'Polite and brief.', skill: 'General' };
   const campaign = ctxData.campaign?.pack as CampaignPack;
   let reply: { utterance: string; endConversation: boolean; reason: string | null };
   try {
@@ -127,8 +127,8 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
     if (e instanceof ApiError && e.code === 'operation_in_progress') throw e;
     const failed = await svc.rpc<PracticeSession>('fail_session', { session_id: session.id });
     const msg = e instanceof ProviderError && e.kind === 'uncertain'
-      ? 'The practice resident did not respond in time, so this practice was stopped. Your transcript is saved and no allowance was used.'
-      : 'The practice resident is unavailable right now, so this practice was stopped. Your transcript is saved and no allowance was used.';
+      ? 'The AI customer did not respond in time, so this practice was stopped. Your transcript is saved and no allowance was used.'
+      : 'The AI customer is unavailable right now, so this practice was stopped. Your transcript is saved and no allowance was used.';
     return { session: failed, residentAudio: null, notices: [msg] };
   }
   const utterance = reply.utterance.slice(0, LIMITS.residentUtteranceMaxChars);

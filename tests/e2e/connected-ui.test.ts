@@ -47,6 +47,8 @@ test('rep: spoken turn via fake microphone → mock transcription → resident r
   await page.getByRole('button', { name: 'Start practice' }).click();
   await page.getByText("I've only got a moment. What's this about?").waitFor();
   await page.getByRole('button', { name: 'Enable microphone' }).click();
+  // Hands-free is on by default; this test drives the manual tap-to-send path.
+  await page.getByLabel(/^Hands-free/).uncheck();
   await page.getByRole('button', { name: 'Tap to speak' }).click();
   await page.getByText('Recording… tap again to send.').waitFor();
   await page.waitForTimeout(1500);
@@ -92,9 +94,15 @@ test('manager: overview, team invite link, flagged session review', async () => 
   await page.getByRole('heading', { name: 'Team overview' }).waitFor();
   await page.getByText(/active reps with a completed session/).waitFor();
   await page.getByRole('link', { name: 'Team' }).click();
-  await page.getByLabel('Email').fill('ui.invitee@test.invalid');
+  await page.getByLabel('Email', { exact: true }).fill('ui.invitee@test.invalid');
   await page.getByRole('button', { name: 'Create invite link' }).click();
   await page.getByText(/\/invite\//).waitFor();
+  await page.getByText('Not emailed: copy this link and send it to them yourself.').waitFor();
+  // Team settings: keep data for 60 days.
+  await page.getByLabel('Keep practice sessions for (days)').fill('60');
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await page.getByText('Settings saved.').waitFor();
+  await page.getByText(/Sessions are deleted after 60 days/).waitFor();
   await page.getByRole('link', { name: 'Overview' }).click();
   const link = page.locator('.card', { hasText: 'Recent sessions' }).locator('tbody tr').first().getByRole('link');
   await link.click();
@@ -104,4 +112,25 @@ test('manager: overview, team invite link, flagged session review', async () => 
   await page.getByText('Review note added.').waitFor();
   assert.deepEqual(errors, []);
   await ctx.close();
+});
+
+test('settings: change your name; the sign-in page offers a password reset; a person with no team is offered a free pilot', async () => {
+  const { page, ctx, errors } = await as(f.A.rep2);
+  await page.goto(srv.url + '/settings');
+  await page.getByLabel('Your name').fill('Robin Rep');
+  await page.getByRole('button', { name: 'Save name' }).click();
+  await page.getByText('Name saved.').waitFor();
+  await page.getByRole('heading', { name: 'Change password' }).waitFor();
+  assert.deepEqual(errors, []);
+  await ctx.close();
+
+  const anon = await browser.newContext();
+  const p2 = await anon.newPage();
+  await p2.goto(srv.url + '/login');
+  await p2.getByRole('button', { name: 'Forgot your password?' }).click();
+  await p2.getByRole('heading', { name: 'Reset your password' }).waitFor();
+  await p2.getByLabel('Email').fill('someone@test.invalid');
+  await p2.getByRole('button', { name: 'Send reset link' }).click();
+  await p2.getByText(/we’ve sent a link to reset the password/).waitFor();
+  await anon.close();
 });

@@ -20,7 +20,17 @@ function bootConfig(): BootConfig {
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
-  return { title: `PitchReady${getConfig().mode === 'demo' ? ' (demo)' : ''}` };
+  const cfg = getConfig();
+  const demo = cfg.mode === 'demo' ? ' (demo)' : '';
+  const description = 'Sales practice with an AI customer. Reps rehearse real conversations by voice or text, on the doorstep, phone, shop floor or in meetings, and get feedback that quotes their own words.';
+  return {
+    metadataBase: new URL(cfg.env.APP_BASE_URL),
+    title: { default: `PitchReady${demo}: practise sales conversations with an AI customer`, template: `%s · PitchReady${demo}` },
+    description,
+    applicationName: 'PitchReady',
+    openGraph: { type: 'website', siteName: 'PitchReady', locale: 'en_GB', title: 'PitchReady: practise the pitch before the real one', description },
+    twitter: { card: 'summary_large_image', title: 'PitchReady: practise the pitch before the real one', description },
+  };
 }
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#faf7f2' };

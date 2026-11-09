@@ -105,6 +105,8 @@ export class DemoRepository implements Repository {
         scenarios: me.role === 'rep' ? E.allowedScenarios(s, me.id) : s.scenarios.filter((x) => !x.archived),
         usage: { allowanceSeconds: s.usage.allowanceSeconds, consumedSeconds: s.usage.consumedSeconds, reservedSeconds: s.usage.reservedSeconds, periodEnd: s.usage.periodEnd },
         retentionDays: s.agency.retentionDays,
+        emailNotifications: s.agency.emailNotifications ?? true,
+        hasTeam: true,
         voice: { stt: false, tts: false, deviceVoice: typeof speechSynthesis !== 'undefined' },
         liveAi: this.useLive(),
         demoPeople: s.people.map((p) => ({ id: p.id, name: p.name, email: p.email, role: p.role, active: p.active })),
@@ -205,6 +207,8 @@ export class DemoRepository implements Repository {
   }
   reportFeedback(id: string, input: Parameters<Repository['reportFeedback']>[1]) { return this.run((s) => { E.reportFeedback(s, id, input); }); }
   requestDeletion(input: { scope: 'my_transcripts' | 'my_account' }) { return this.run((s) => { E.requestDeletion(s, input.scope); }); }
+  updateName(name: string) { return this.run((s) => { E.updateName(s, name); }); }
+  updateTeamSettings(input: { retentionDays?: number; emailNotifications?: boolean }) { return this.run((s) => { E.updateTeamSettings(s, input); }); }
   async sendContact(): Promise<void> { throw new Error('The demo can’t send messages. Use the contact page on the live PitchReady site.'); }
 
   getOverview(periodDays: number) {

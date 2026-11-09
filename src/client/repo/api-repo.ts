@@ -39,6 +39,8 @@ export class ApiRepository implements Repository {
   async reportFeedback(id: string, input: any) { await post(`/api/sessions/${encodeURIComponent(id)}/reports`, input); }
   async requestDeletion(input: any) { await post('/api/me/deletion-requests', input); }
   async sendContact(input: any) { await post('/api/contact', input); }
+  async updateName(name: string) { await call('/api/me', { method: 'PUT', body: JSON.stringify({ name }) }); }
+  async updateTeamSettings(input: any) { await call('/api/manager/settings', { method: 'PUT', body: JSON.stringify(input) }); }
   getOverview(periodDays: number) { return call<any>(`/api/manager/overview?days=${periodDays}`); }
   listTeamSessions() { return call<any>('/api/manager/sessions'); }
   getRoster() { return call<any>('/api/manager/roster'); }
@@ -61,6 +63,10 @@ export const auth = {
   signIn: (email: string, password: string) => post<{ ok: true }>('/api/auth/sign-in', { email, password }),
   signUp: (email: string, password: string) => post<{ ok: true; confirmationRequired: boolean }>('/api/auth/sign-up', { email, password, acceptTerms: true }),
   signOut: () => post<{ ok: true }>('/api/auth/sign-out', {}),
+  forgotPassword: (email: string) => post<{ ok: true }>('/api/auth/forgot', { email }),
+  passwordStatus: () => call<{ recovery: boolean }>('/api/auth/password'),
+  changePassword: (newPassword: string, currentPassword?: string) => post<{ ok: true }>('/api/auth/password', currentPassword ? { newPassword, currentPassword } : { newPassword }),
+  startPilot: (teamName: string, yourName: string) => post<{ ok: true }>('/api/pilot', { teamName, yourName }),
   adoptSession: (accessToken: string, refreshToken: string) => post<{ ok: true }>('/api/auth/session', { accessToken, refreshToken }),
   checkInvite: (token: string) => post<{ status: string; email?: string; role?: string; agencyName?: string }>('/api/invitations/check', { token }),
   acceptInvite: (token: string) => post<{ ok: true }>('/api/invitations/accept', { token }),

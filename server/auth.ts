@@ -101,6 +101,39 @@ export async function signUp(email: string, password: string, terms?: { version:
   return { confirmationRequired: true, cookies: [] };
 }
 
+/** Emails a password-reset link (sent by Supabase). Never reveals whether the address has an account. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  if (testMode()) return;
+  const redirect = `${getConfig().env.APP_BASE_URL}/login`;
+  const r = await gotrue(`/recover?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email }) });
+  if (r.status === 429) throw new ApiError(429, 'rate_limited', 'Too many attempts. Please wait a few minutes and try again.');
+}
+
+/** True when this (already verified) access token came from a password-reset link in the last 30 minutes. */
+export function isRecoverySession(accessToken: string, now = Date.now()): boolean {
+  try {
+    const payload = JSON.parse(Buffer.from(accessToken.split('.')[1] ?? '', 'base64url').toString('utf8')) as { amr?: { method?: string; timestamp?: number }[] };
+    return (payload.amr ?? []).some((a) => (a.method === 'recovery' || a.method === 'otp') && typeof a.timestamp === 'number' && now / 1000 - a.timestamp < 30 * 60);
+  } catch { return false; }
+}
+
+/**
+ * Sets a new password. Needs the current password, unless the person has just arrived from a
+ * password-reset link (their token says so, and Supabase has verified the token).
+ */
+export async function changePassword(user: AuthUser, newPassword: string, currentPassword?: string): Promise<void> {
+  if (testMode()) return;
+  if (!isRecoverySession(user.accessToken)) {
+    if (!currentPassword) throw new ApiError(400, 'current_password_required', 'Enter your current password.');
+    const check = await gotrue('/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email: user.email, password: currentPassword }) });
+    if (check.status !== 200) throw new ApiError(403, 'invalid_credentials', 'Your current password is incorrect.');
+  }
+  const r = await gotrue('/user', { method: 'PUT', bearer: user.accessToken, body: JSON.stringify({ password: newPassword }) });
+  if (r.status === 422 && /same|different/i.test(JSON.stringify(r.body))) throw new ApiError(400, 'same_password', 'Choose a password you haven’t used here before.');
+  if (r.status === 422) throw new ApiError(400, 'weak_password', 'That password isn’t strong enough. Try a longer one.');
+  if (r.status >= 400) throw new ApiError(400, 'password_change_failed', 'Could not change the password. Sign in again and retry.');
+}
+
 export async function adoptSession(accessToken: string, refreshToken: string): Promise<string[]> {
   const r = await gotrue('/user', { method: 'GET', bearer: accessToken });
   if (r.status !== 200) throw new ApiError(401, 'invalid_session', 'That sign-in link is no longer valid.');

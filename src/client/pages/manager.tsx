@@ -4,7 +4,7 @@ import { SALES_TEMPLATES, getTemplate, type SalesTemplate } from '../../../lib/c
 import { useEffect, useState } from 'react';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 import { PRACTICE_MINUTES, practiceMinutesOf, type PracticeMinutes } from '../../../lib/domain/limits.ts';
-import { MIN_SAMPLE } from '../../../lib/domain/metrics.ts';
+import { MIN_SAMPLE, type WeekTrend } from '../../../lib/domain/metrics.ts';
 import { campaignPackSchema, rubricDimensionsSchema } from '../../../lib/domain/schemas.ts';
 import type { CampaignPack, ManagerReview, RubricVersion } from '../../../lib/domain/types.ts';
 import { newKey, useApp, useAsync } from '../app-context.tsx';
@@ -50,6 +50,7 @@ export function ManagerOverviewPage() {
             <div className="bar" style={{ marginTop: '0.5rem' }} aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, (o.remainingSeconds / o.allowanceSeconds) * 100))}%` }} /></div>
             <p className="small muted" style={{ marginTop: '0.5rem' }}>Practice pauses when the pooled allowance runs out. In-progress sessions hold a reservation until they end.</p>
           </div>
+          <TrendCard trend={o.trend ?? []} />
           <div className="card">
             <h2>Skill breakdown · rubric {o.rubricVersion}</h2>
             <p className="small muted">Means use observed scores only. “Not observed” is never counted as zero. Fewer than {MIN_SAMPLE} observations is shown as not enough data.</p>
@@ -98,7 +99,7 @@ export function ManagerRepsPage() {
   const admin = useAsync(() => (ctx?.user?.role === 'manager' ? repo.getScenarioAdmin() : Promise.resolve(null)), [repo, ctx?.user?.id]);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'rep' | 'manager'>('rep');
-  const [link, setLink] = useState<{ link: string; expiresAt: string } | null>(null);
+  const [link, setLink] = useState<{ link: string; expiresAt: string; emailed?: boolean; email?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   if (guard) return guard;
@@ -115,8 +116,8 @@ export function ManagerRepsPage() {
           <p className="small muted">Managers: {r.members.filter((m) => m.role === 'manager').map((m) => m.name).join(', ')} · Seat limit {r.seatLimit} reps.</p>
           <div className="card invite-card">
             <h2>Invite someone</h2>
-            <p className="small muted">This creates a single-use link for you to copy and send yourself. PitchReady does not email anyone.</p>
-            <form onSubmit={async (e) => { e.preventDefault(); setCopied(false); await act(async () => { setLink(await repo.createInvitation({ email, role })); setEmail(''); }); }}>
+            <p className="small muted">This creates a single-use link. If we can’t email it to them for you, copy it and send it yourself.</p>
+            <form onSubmit={async (e) => { e.preventDefault(); setCopied(false); await act(async () => { const sentTo = email; setLink({ ...(await repo.createInvitation({ email, role })), email: sentTo }); setEmail(''); }); }}>
               <div className="grid two">
                 <div className="field"><label htmlFor="inv-email">Email</label><input id="inv-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <div className="field"><label htmlFor="inv-role">Role</label><select id="inv-role" value={role} onChange={(e) => setRole(e.target.value as 'rep')}><option value="rep">Rep</option><option value="manager">Manager</option></select></div>
@@ -125,11 +126,13 @@ export function ManagerRepsPage() {
             </form>
             {link && (
               <div className="alert info" style={{ marginTop: '0.75rem' }}>
+                <p role="status"><strong>{link.emailed ? `Invitation emailed to ${link.email}.` : 'Not emailed: copy this link and send it to them yourself.'}</strong></p>
                 <p style={{ wordBreak: 'break-all' }}><strong>Invite link</strong> (shown once; expires {fmtDate(link.expiresAt)}):<br /><code>{link.link}</code></p>
                 <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(link.link); setCopied(true); } catch { setCopied(false); } }}>{copied ? 'Copied' : 'Copy link'}</button>
               </div>
             )}
           </div>
+          <TeamSettings />
           <TeamDataExport />
           <div className="card table-wrap">
             <h2>Invitations</h2>
@@ -148,6 +151,66 @@ export function ManagerRepsPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+const WEEK_LABEL = ['Last 7 days', '1 week before', '2 weeks before', '3 weeks before'];
+
+/** Four weeks at a glance: how much the team practised and how scores moved. */
+function TrendCard({ trend }: { trend: WeekTrend[] }) {
+  if (trend.every((w) => w.sessions === 0)) return null;
+  const max = Math.max(1, ...trend.map((w) => w.sessions));
+  const latest = trend.at(-1)!, prior = trend.at(-2);
+  const delta = latest.mean !== null && prior?.mean != null ? Math.round((latest.mean - prior.mean) * 10) / 10 : null;
+  return (
+    <div className="card table-wrap">
+      <div className="spread"><h2 className="m0">Last 4 weeks</h2>
+        {delta !== null && <span className={`tag ${delta > 0 ? 'teal' : ''}`}>Average score {delta > 0 ? `up ${delta.toFixed(1)}` : delta < 0 ? `down ${Math.abs(delta).toFixed(1)}` : 'level'} on the week before</span>}</div>
+      <table className="rtable trend-table">
+        <thead><tr><th>Week</th><th>Sessions</th><th>Reps practising</th><th>Average score</th></tr></thead>
+        <tbody>{trend.map((w) => (
+          <tr key={w.weeksAgo}>
+            <td className="rt-main"><strong>{WEEK_LABEL[w.weeksAgo]}</strong></td>
+            <td data-label="Sessions"><span className="trend-cell"><span>{w.sessions}</span><svg className="trend-bar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width={(w.sessions / max) * 100} height="8" rx="2" /></svg></span></td>
+            <td data-label="Reps practising">{w.reps}</td>
+            <td data-label="Average score">{w.mean === null ? <span className="muted small">{w.sessions === 0 ? '–' : `needs ${MIN_SAMPLE}+ sessions`}</span> : `${w.mean.toFixed(1)} / 5`}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      <p className="small muted m0">Sessions with completed feedback from active reps. Older sessions drop out when they pass your retention period.</p>
+    </div>
+  );
+}
+
+/** How long data is kept and whether managers get emails. */
+function TeamSettings() {
+  const { repo, ctx, refresh } = useApp();
+  const [days, setDays] = useState(String(ctx?.retentionDays ?? 30));
+  const [emails, setEmails] = useState(ctx?.emailNotifications ?? true);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const n = Number(days);
+  const valid = Number.isInteger(n) && n >= 1 && n <= 365;
+  const shorter = valid && n < (ctx?.retentionDays ?? 30);
+  return (
+    <div className="card">
+      <h2>Team settings</h2>
+      {err && <ErrorBox message={err} />}
+      <form onSubmit={async (e) => {
+        e.preventDefault(); setMsg(null); setErr(null);
+        if (shorter && !confirm(`Keep practice data for ${n} days? Sessions older than that will be deleted for good within a few minutes.`)) return;
+        setBusy(true);
+        try { await repo.updateTeamSettings({ retentionDays: n, emailNotifications: emails }); await refresh(); setMsg('Settings saved.'); }
+        catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+      }}>
+        <div className="field"><label htmlFor="ts-days">Keep practice sessions for (days)</label>
+          <input id="ts-days" type="number" min={1} max={365} inputMode="numeric" required value={days} onChange={(e) => setDays(e.target.value)} />
+          <p className="hint">Between 1 and 365. Transcripts, feedback and review notes are deleted automatically after this. Download your team’s data first if you want to keep it.</p></div>
+        <label className="check"><input type="checkbox" checked={emails} onChange={(e) => setEmails(e.target.checked)} /><span>Send managers an email when a session is flagged for review, plus a weekly summary of the team’s practice</span></label>
+        <div className="row mt-sm"><button className="btn" type="submit" disabled={busy || !valid}>{busy ? 'Saving…' : 'Save settings'}</button>{msg && <span className="small" role="status">{msg}</span>}</div>
+      </form>
     </div>
   );
 }

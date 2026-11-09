@@ -21,6 +21,15 @@ export interface AppContextData {
   scenarios: Scenario[];
   usage: { allowanceSeconds: number; consumedSeconds: number; reservedSeconds: number; periodEnd: string | null } | null;
   retentionDays: number | null;
+  /** Manager emails (flagged sessions, weekly summary) on or off for the team. */
+  emailNotifications?: boolean | null;
+  /** Signed in and belongs to a team. */
+  hasTeam?: boolean;
+  /** Signed in, no team yet, and free pilots are open. */
+  canStartPilot?: boolean;
+  emailConfirmed?: boolean;
+  /** Free pilots can be started by anyone who signs up (connected mode). */
+  pilotsOpen?: boolean;
   voice: { stt: boolean; tts: boolean; deviceVoice: boolean };
   liveAi: boolean;
   demoPeople?: { id: string; name: string; email: string; role: 'manager' | 'rep'; active: boolean }[];
@@ -74,7 +83,9 @@ export interface Repository {
   getOverview(periodDays: number): Promise<ManagerOverview & { remainingSeconds: number; allowanceSeconds: number }>;
   listTeamSessions(): Promise<TeamSessionRow[]>;
   getRoster(): Promise<RosterData>;
-  createInvitation(input: { email: string; role: 'rep' | 'manager' }): Promise<{ link: string; expiresAt: string }>;
+  createInvitation(input: { email: string; role: 'rep' | 'manager' }): Promise<{ link: string; expiresAt: string; emailed?: boolean }>;
+  updateName(name: string): Promise<void>;
+  updateTeamSettings(input: { retentionDays?: number; emailNotifications?: boolean }): Promise<void>;
   revokeInvitation(id: string): Promise<void>;
   setMemberActive(userId: string, active: boolean): Promise<void>;
   addReview(sessionId: string, input: { note: string; resolution: ManagerReview['resolution']; reportId?: string | null }): Promise<void>;
