@@ -202,8 +202,7 @@ export function AboutPage() {
       <PageHero paint="mustard" title="About PitchReady" lede="Built by a door-to-door salesperson and trainer, for every kind of sales team." />
       <section className="site-section" aria-labelledby="a-story">
         <div className="lp-wrap site-about">
-          {/* A founder photo can replace the initials later. */}
-          <div className="site-portrait" aria-hidden="true"><span className="site-initials">KR</span></div>
+          <div className="site-portrait"><img src="/images/kye-richardson.jpg" alt="Kye Richardson, founder of PitchReady" width={440} height={560} /></div>
           <div className="site-prose">
             <h2 id="a-story" className="lp-h2">The story</h2>
             <p>I’m Kye Richardson. I’ve spent around two and a half years in door-to-door sales and paid fundraising. In that time I trained more than 100 new starters and reached the top of the national sales rankings on several occasions.</p>

@@ -18,7 +18,7 @@ const out = await build({
   logLevel: 'warning',
 });
 const js = out.outputFiles[0]!.text.replace(/<\/script/gi, '<\\/script');
-// One self-contained file: the self-hosted font is embedded as a data URI.
+// One self-contained file: the self-hosted font and the founder photo are embedded as data URIs.
 const font = readFileSync(join(root, 'public/fonts/bricolage-grotesque.woff2')).toString('base64');
 const css = readFileSync(join(root, 'src/client/styles.css'), 'utf8').replace('url("/fonts/bricolage-grotesque.woff2")', `url("data:font/woff2;base64,${font}")`);
 const html = `<!DOCTYPE html>
@@ -28,5 +28,6 @@ const html = `<!DOCTYPE html>
 <body><div id="root"></div><script>${js}</script></body></html>
 `;
 mkdirSync(join(root, 'dist'), { recursive: true });
-writeFileSync(join(root, 'dist/pitchready-demo.html'), html);
+const photo = `data:image/jpeg;base64,${readFileSync(join(root, 'public/images/kye-richardson.jpg')).toString('base64')}`;
+writeFileSync(join(root, 'dist/pitchready-demo.html'), html.replaceAll('/images/kye-richardson.jpg', photo));
 console.log(`Standalone demo written: dist/pitchready-demo.html (${(html.length / 1024).toFixed(0)} KiB)`);

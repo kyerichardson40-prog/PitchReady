@@ -647,3 +647,5 @@ label:has(> input[type="checkbox"]) { display: flex; flex-wrap: nowrap; align-it
 .site-facts strong { font-family: var(--display); font-weight: 800; font-size: 1.35rem; color: var(--ink); line-height: 1.15; }
 .site-facts span { color: var(--ink-2); font-size: 0.95rem; }
 @media (max-width: 819px) { .site-portrait { width: 160px; height: 200px; } .site-initials { font-size: 3.2rem; } }
+.site-portrait { overflow: hidden; }
+.site-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
