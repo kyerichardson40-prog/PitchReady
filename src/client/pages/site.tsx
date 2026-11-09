@@ -84,7 +84,7 @@ export function HowItWorksPage() {
   const cta = useCtaContext();
   return (
     <div className="lp site">
-      <PageHero title="How PitchReady works" lede="Managers set up the conversations their team should be able to handle. Reps practise them in three-minute sessions and get feedback that quotes their own words. Here’s the whole process." />
+      <PageHero title="How PitchReady works" lede="Managers set up the conversations their team should be able to handle. Reps practise them in short sessions and get feedback that quotes their own words. Here’s the whole process." />
 
       <section className="site-section" aria-labelledby="h-setup">
         <div className="lp-wrap site-cols">
@@ -105,13 +105,13 @@ export function HowItWorksPage() {
       <section className="site-section site-section-alt" aria-labelledby="h-practise">
         <div className="lp-wrap site-cols">
           <div className="site-col-intro">
-            <p className="site-kicker">For reps · three minutes at a time</p>
+            <p className="site-kicker">For reps · a few minutes at a time</p>
             <h2 id="h-practise" className="lp-h2">2. Practise the conversation</h2>
             <p className="lp-section-lede">Short enough to fit between shifts, real enough to matter.</p>
           </div>
           <NumberedSteps paint="red" steps={[
             { title: 'Pick a scenario', text: 'Before starting, reps can read the rules and approved answers for their campaign.' },
-            { title: 'Talk it through', text: 'Speak or type. The AI customer answers in character and reacts to what the rep actually says: they can ask questions, push back, or end the conversation. Each session lasts up to three minutes and twelve replies.' },
+            { title: 'Talk it through', text: 'Speak or type. The AI customer answers in character and reacts to what the rep actually says: they can ask questions, push back, or end the conversation. Each session lasts 3, 5 or 10 minutes, as the manager chooses, and the clock pauses while the customer thinks.' },
             { title: 'Read the feedback', text: 'A minute or two later: scores for five skills, each with the reason and exact quotes, a tick or cross for each must-say line, flags for never-say phrases or unsupported claims, one strength and one thing to improve.' },
             { title: 'Retry the weak spot', text: 'A one-minute drill puts the rep straight back into the moment that went wrong, so the fix sticks.' },
           ]} />

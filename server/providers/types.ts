@@ -27,6 +27,8 @@ export interface ResidentContext {
   drillKey: DrillKey | null;
   campaign: CampaignPack;
   transcript: TranscriptTurn[];
+  /** How many replies the rep has left in this session (lets the customer pace towards an ending). */
+  repliesLeft?: number;
   operationId: string;
 }
 

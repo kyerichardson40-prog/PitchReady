@@ -2,7 +2,7 @@
 import { useCustomer } from '../customer.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDrill, getScenario } from '../../../lib/content/scenarios.ts';
-import { LIMITS, sessionLimits } from '../../../lib/domain/limits.ts';
+import { LIMITS, limitsOfSession, sessionLimits } from '../../../lib/domain/limits.ts';
 import type { DrillKey, PracticeSession, ScenarioKey } from '../../../lib/domain/types.ts';
 import { newKey, useApp } from '../app-context.tsx';
 import { useNavigate, useLocation } from '../router.tsx';
@@ -32,6 +32,8 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   const [deviceVoice, setDeviceVoice] = useState(false);
   const [tapToPlay, setTapToPlay] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  /** While the AI works on a reply the server pauses the clock; the display freezes at this moment. */
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
 
   const recorder = useRef<TurnRecorder | null>(null);
   const audioUrl = useRef<string | null>(null);
@@ -129,7 +131,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
 
   const sendTyped = async () => {
     if (!session || busy || !text.trim()) return;
-    setBusy(true); setError(null); setNotice(null);
+    setBusy(true); setError(null); setNotice(null); setPausedAt(Date.now());
     pendingKey.current ??= newKey('turn');
     const prev = session.turns.length;
     try {
@@ -142,7 +144,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     } catch (e) {
       setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
       await handleError(e); // pendingKey is kept so a retry cannot create a duplicate turn
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setPausedAt(null); }
   };
 
   const enableMic = async () => {
@@ -168,7 +170,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     if (!out) { setMic('ready'); return; }
     if (out.blob.size > LIMITS.audioMaxBytes) { setMic('ready'); setError('That recording was too large to send. Please record a shorter turn, or type it.'); return; }
     if (out.blob.size < 800) { setMic('ready'); setNotice('That recording was too short to transcribe. Try again or type your reply.'); return; }
-    setBusy(true); setError(null); setMic('uploading');
+    setBusy(true); setError(null); setMic('uploading'); setPausedAt(Date.now());
     pendingKey.current ??= newKey('turn');
     const prev = session.turns.length;
     try {
@@ -180,7 +182,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     } catch (e) {
       setMic('ready');
       await handleError(e);
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setPausedAt(null); }
   };
 
   const end = useCallback(async () => {
@@ -193,12 +195,13 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     finally { setBusy(false); }
   }, [session, repo, finish, handleError]);
 
-  const remaining = session?.deadlineAt ? Math.max(0, Math.ceil((new Date(session.deadlineAt).getTime() - now) / 1000)) : null;
+  const shownNow = pausedAt ?? now;
+  const remaining = session?.deadlineAt ? Math.max(0, Math.ceil((new Date(session.deadlineAt).getTime() - shownNow) / 1000)) : null;
   useEffect(() => { if (remaining === 0 && session?.status === 'active') void end(); }, [remaining, session, end]);
 
   if (!scenario) return <ErrorBox message="This scenario isn’t in your practice list. Choose one from Practise." />;
   if (ctx?.user?.role !== 'rep') return <ErrorBox message="Practice is available in the rep view." />;
-  const limits = sessionLimits(drill ? 'drill' : 'full');
+  const limits = session ? limitsOfSession(session) : sessionLimits(drill ? 'drill' : 'full', ctx?.campaign?.practiceMinutes);
   const repTurns = session?.turns.filter((t) => t.speaker === 'rep').length ?? 0;
 
   if (!session) {
@@ -216,7 +219,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
         </div>
         <div className="card">
           <h2>Time and turns</h2>
-          <p>Up to {limits.maxSeconds / 60 >= 1 ? `${limits.maxSeconds / 60} minutes` : `${limits.maxSeconds} seconds`} of wall-clock time — including thinking and listening — and up to {limits.maxRepTurns} replies. The clock starts when the {customer.label}’s first line is ready and can’t be reset by reloading.</p>
+          <p>Up to {limits.maxSeconds / 60 >= 1 ? `${limits.maxSeconds / 60} minutes` : `${limits.maxSeconds} seconds`} and up to {limits.maxRepTurns} replies. The clock starts when the {customer.label}’s first line is ready, pauses while the {customer.label} is thinking of a reply, and can’t be reset by reloading.</p>
           <h3>Device check</h3>
           {sttEnabled ? (
             <p className="small">{recordingSupported() ? 'This browser can record audio. You will be asked for microphone permission when you tap “Enable microphone”.' : MIC_STATE_TEXT.unsupported}</p>
@@ -243,8 +246,9 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
           <h1 style={{ marginBottom: 0 }}>{drill ? `Drill: ${drill.title}` : scenario.title}</h1>
           <span className="small muted">{repTurns}/{limits.maxRepTurns} replies · simulated {customer.label}{repo.mode === 'demo' ? (ctx?.liveAi ? ' (Claude, live)' : ' (scripted demo)') : ''}</span>
         </div>
-        <div aria-live="off" className={`timer ${remaining !== null && remaining <= 20 ? 'low' : ''}`} aria-label="Time remaining">
+        <div aria-live="off" className={`timer ${remaining !== null && remaining <= 20 ? 'low' : ''} ${pausedAt ? 'paused' : ''}`} aria-label={pausedAt ? 'Time remaining (paused while the reply is prepared)' : 'Time remaining'} title={pausedAt ? 'Paused while the reply is prepared' : undefined}>
           {remaining === null ? '—' : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`}
+          {pausedAt && <span className="timer-paused">paused</span>}
         </div>
       </div>
       <div className="card" aria-live="polite">

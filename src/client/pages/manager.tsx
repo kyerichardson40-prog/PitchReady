@@ -3,6 +3,7 @@ import { CHANNEL_INFO, SALES_CHANNELS, salesContextOf, type SalesChannel, type S
 import { SALES_TEMPLATES, getTemplate, type SalesTemplate } from '../../../lib/content/templates.ts';
 import { useEffect, useState } from 'react';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
+import { PRACTICE_MINUTES, practiceMinutesOf, type PracticeMinutes } from '../../../lib/domain/limits.ts';
 import { MIN_SAMPLE } from '../../../lib/domain/metrics.ts';
 import { campaignPackSchema, rubricDimensionsSchema } from '../../../lib/domain/schemas.ts';
 import type { CampaignPack, ManagerReview, RubricVersion } from '../../../lib/domain/types.ts';
@@ -306,7 +307,8 @@ export function ManagerCampaignPage() {
         <div className="field"><label htmlFor="c-org">Organisation or brand</label><input id="c-org" value={pack.organisation} onChange={(e) => set({ organisation: e.target.value })} /></div>
       </div>
 
-      <SalesSettingEditor value={salesContextOf(pack)} onChange={(sales_context) => set({ sales_context })} />
+      <SalesSettingEditor value={salesContextOf(pack)} onChange={(sales_context) => set({ sales_context })}
+        minutes={practiceMinutesOf(pack)} onMinutes={(practice_minutes) => set({ practice_minutes })} />
 
       <section className="card rules-section rules-must" aria-labelledby="rules-must">
         <h2 id="rules-must">What reps must say</h2>
@@ -452,7 +454,13 @@ function TemplatePicker({ onLoad }: { onLoad: (t: SalesTemplate, withScenarios: 
   );
 }
 
-function SalesSettingEditor({ value, onChange }: { value: SalesContext; onChange: (v: SalesContext) => void }) {
+const LENGTH_HINT: Record<PracticeMinutes, string> = {
+  3: 'Quick openers and objections: doorsteps, the street, short calls. Up to 12 replies.',
+  5: 'Room for questions and a proper close: most phone and shop-floor sales. Up to 20 replies.',
+  10: 'Full discovery and negotiation: business meetings and longer calls. Up to 40 replies.',
+};
+
+function SalesSettingEditor({ value, onChange, minutes, onMinutes }: { value: SalesContext; onChange: (v: SalesContext) => void; minutes: PracticeMinutes; onMinutes: (m: PracticeMinutes) => void }) {
   const set = (patch: Partial<SalesContext>) => onChange({ ...value, ...patch });
   return (
     <section className="card rules-section rules-setting" aria-labelledby="rules-setting">
@@ -472,6 +480,11 @@ function SalesSettingEditor({ value, onChange }: { value: SalesContext; onChange
       <div className="field"><label htmlFor="s-outcome">What a good outcome looks like</label>
         <input id="s-outcome" value={value.good_outcome} placeholder="e.g. a booked appointment, or a clear no" onChange={(e) => set({ good_outcome: e.target.value })} />
         <p className="small muted m0">Feedback never requires a sale: a respectful “no” can score well.</p></div>
+      <div className="field"><label htmlFor="s-length">Practice session length</label>
+        <select id="s-length" value={minutes} onChange={(e) => onMinutes(Number(e.target.value) as PracticeMinutes)}>
+          {PRACTICE_MINUTES.map((m) => <option key={m} value={m}>{m} minutes</option>)}
+        </select>
+        <p className="small muted m0">{LENGTH_HINT[minutes]} Longer sessions use more of your practice allowance. Retry drills stay at 60 seconds.</p></div>
     </section>
   );
 }

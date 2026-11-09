@@ -66,6 +66,8 @@ export interface CampaignPack {
   sample_disengagement: string;
   /** Where and what the team sells. Missing on packs from before it existed (door-to-door fundraising). */
   sales_context?: SalesContext;
+  /** Full practice session length in minutes: 3 (default), 5 or 10. */
+  practice_minutes?: 3 | 5 | 10;
 }
 
 export interface Scenario {
@@ -163,6 +165,13 @@ export interface PracticeSession {
   corrections: TurnCorrection[];
   evaluations: EvaluationRecord[];
   usedSeconds: number | null;
+  /** Frozen at start: full sessions follow the campaign's practice length (3, 5 or 10 minutes). */
+  maxSeconds?: number;
+  maxRepTurns?: number;
+  /** AI processing time credited back to the clock (not charged). */
+  pausedSeconds?: number;
+  /** Demo engine only: when the current pause began (live AI is working on a reply). */
+  pausedAt?: string | null;
 }
 
 export interface FeedbackReport {

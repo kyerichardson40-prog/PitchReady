@@ -105,7 +105,7 @@ function PracticeScene() {
 
 const STEPS = [
   { n: 1, paint: 'teal', title: 'Pick a scenario', text: 'Choose who you want to practise with: in a rush, sceptical, happy with what they have. Your manager decides which ones you get.' },
-  { n: 2, paint: 'red', title: 'Have the conversation', text: 'Up to three minutes. Speak or type, and the AI customer answers back. They can say no, just like a real one.' },
+  { n: 2, paint: 'red', title: 'Have the conversation', text: 'Three to ten minutes. Speak or type, and the AI customer answers back. They can say no, just like a real one.' },
   { n: 3, paint: 'cobalt', title: 'See what you said', text: 'Feedback on five skills, each backed by a quote from your conversation, then a one-minute retry of the weakest moment.' },
 ];
 
@@ -159,7 +159,7 @@ export function HomePage() {
       <section className="lp-hero" aria-labelledby="lp-title">
         <div className="lp-hero-copy">
           <h1 id="lp-title" className="lp-title">Practise the pitch before the real one.</h1>
-          <p className="lp-lede">PitchReady plays your customer: on the doorstep, on the phone, on the shop floor or across a meeting table. Your team practises in three minutes and gets feedback that quotes their exact words.</p>
+          <p className="lp-lede">PitchReady plays your customer: on the doorstep, on the phone, on the shop floor or across a meeting table. Your team practises in a few minutes and gets feedback that quotes their exact words.</p>
           {primaryCtas}
           {demo && !user && <p className="lp-fine">A demo with fictional people and a fictional campaign. Everything stays in this browser.</p>}
         </div>

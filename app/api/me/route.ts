@@ -1,3 +1,4 @@
+import { practiceMinutesOf } from '../../../lib/domain/limits.ts';
 import { salesContextOf } from '../../../lib/domain/sales.ts';
 import { open } from '../../../server/guard.ts';
 import { authenticate } from '../../../server/auth.ts';
@@ -26,6 +27,7 @@ export const GET = open(async (req, { rid }) => {
       version: c.campaign.version, name: c.campaign.pack.name, fictional: !!c.campaign.pack.fictional, organisation: c.campaign.pack.organisation, facts: c.campaign.pack.approved_facts,
       mustSay: c.campaign.pack.must_say ?? [], neverSay: c.campaign.pack.never_say ?? [], forbiddenClaims: c.campaign.pack.forbidden_claims ?? [], objectionAnswers: c.campaign.pack.objection_answers ?? [],
       salesContext: salesContextOf(c.campaign.pack),
+      practiceMinutes: practiceMinutesOf(c.campaign.pack),
     } : null,
     rubricVersion: c?.campaign?.rubricVersion ?? null,
     scenarios: c?.scenarios ?? [],

@@ -7,7 +7,7 @@ import { FICTIONAL_CAMPAIGN } from '../content/campaign.ts';
 import { DEMO_RUBRIC } from '../content/rubric.ts';
 import { getDrill, getScenario, scenarioForDrill, SCENARIOS } from '../content/scenarios.ts';
 import { validateEvaluation, validationContext } from '../domain/evaluation-validator.ts';
-import { sessionLimits } from '../domain/limits.ts';
+import { LIMITS, limitsOfSession, practiceMinutesOf, sessionLimits } from '../domain/limits.ts';
 import { buildDirectory, buildRepProfile, computeOverview, type RepDirectoryRow, type RepProfile, type TeamSessionSummary } from '../domain/metrics.ts';
 import { chargeableSeconds, residentDirective } from '../domain/session-rules.ts';
 import { transcriptAtRevision, turnLabel } from '../domain/transcript.ts';
@@ -252,12 +252,12 @@ export function startSession(s: DemoState, input: { scenarioKey: ScenarioKey; dr
     const parent = getSessionRaw(s, input.parentSessionId);
     if (parent.repId !== me.id) throw new DemoError('invalid_parent', 'Drill parent must be one of your sessions.');
   }
-  const { maxSeconds } = sessionLimits(kind);
+  const pub = currentPublished(s);
+  const { maxSeconds, maxRepTurns } = sessionLimits(kind, practiceMinutesOf(pub.pack));
   if (remainingSeconds(s) < maxSeconds) throw new DemoError('allowance_exhausted', `Not enough practice allowance left: a ${kind === 'drill' ? 'drill' : 'session'} needs ${maxSeconds} seconds reserved.`);
   if (s.sessions.some((x) => x.repId === me.id && x.status === 'active' && x.deadlineAt && new Date(x.deadlineAt) > now)) {
     throw new DemoError('session_in_progress', 'Finish or end your current practice first.');
   }
-  const pub = currentPublished(s);
   const opener = input.drillKey ? getDrill(input.drillKey)!.opener : scenario.opener;
   const id = uid('session');
   const session: PracticeSession = {
@@ -269,7 +269,7 @@ export function startSession(s: DemoState, input: { scenarioKey: ScenarioKey; dr
     startedAt: iso(now), deadlineAt: iso(new Date(now.getTime() + maxSeconds * 1000)), endedAt: null, endReason: null,
     transcriptRevision: 1,
     turns: [{ id: 'resident-1', sequence: 1, speaker: 'resident', text: opener, source: 'scripted', createdAt: iso(now) }],
-    corrections: [], evaluations: [], usedSeconds: null,
+    corrections: [], evaluations: [], usedSeconds: null, maxSeconds, maxRepTurns, pausedSeconds: 0, pausedAt: null,
   };
   s.sessions.push(session);
   s.usage.reservedSeconds += maxSeconds;
@@ -304,13 +304,14 @@ export function submitTurn(s: DemoState, sessionId: string, input: { text: strin
   s.idempotency[key] = 'done';
 
   const transcript = transcriptAtRevision(session.turns, [], 1);
-  const { maxRepTurns } = sessionLimits(session.kind);
+  const { maxRepTurns } = limitsOfSession(session);
   const directive = residentDirective({ scenarioKey: session.scenarioKey, drillKey: session.drillKey, transcript, maxRepTurns });
   if (directive.kind === 'end') {
     endSession(s, sessionId, { idempotencyKey: `auto-${sessionId}` }, now, directive.reason === 'turn_limit' ? 'turn_limit' : 'resident_ended', evaluateOnEnd);
     return session;
   }
-  if (opts.scriptedReply === false) return session;
+  // Live AI: pause the clock until the reply arrives (commitResidentTurn credits the time back).
+  if (opts.scriptedReply === false) { session.pausedAt = iso(now); return session; }
   const reply = demoResidentReply({ scenarioKey: session.scenarioKey, drillKey: session.drillKey, transcript });
   if (reply.utterance) {
     session.turns.push({ id: turnLabel('resident', session.turns), sequence: session.turns.length + 1, speaker: 'resident', text: reply.utterance, source: 'scripted', createdAt: iso(now) });
@@ -322,10 +323,11 @@ export function submitTurn(s: DemoState, sessionId: string, input: { text: strin
 export function endSession(s: DemoState, sessionId: string, input: { idempotencyKey: string }, now = new Date(), reason: EndReason = 'rep_ended', evaluate = true): PracticeSession {
   const session = ownActiveSession(s, sessionId);
   if (session.status !== 'active') return session; // idempotent: settle once
-  const { maxSeconds } = sessionLimits(session.kind);
+  const { maxSeconds } = limitsOfSession(session);
+  resumeClock(session, now);
   const deadline = session.deadlineAt ? new Date(session.deadlineAt) : now;
   const endAt = now > deadline ? deadline : now;
-  const used = chargeableSeconds(session.startedAt ? new Date(session.startedAt) : null, endAt, maxSeconds);
+  const used = chargeableSeconds(session.startedAt ? new Date(session.startedAt) : null, endAt, maxSeconds, session.pausedSeconds ?? 0);
   session.status = 'ended';
   session.endedAt = iso(endAt);
   session.endReason = now > deadline ? 'time_limit' : reason;
@@ -340,10 +342,20 @@ export function endSession(s: DemoState, sessionId: string, input: { idempotency
   return session;
 }
 
+/** Ends a pause (if any): the time the AI spent, up to a cap, is added back to the deadline and not charged. */
+function resumeClock(session: PracticeSession, now: Date) {
+  if (!session.pausedAt) return;
+  const credit = Math.max(0, Math.min(LIMITS.pauseCreditMaxSeconds, Math.round((now.getTime() - new Date(session.pausedAt).getTime()) / 1000)));
+  if (session.deadlineAt) session.deadlineAt = iso(new Date(new Date(session.deadlineAt).getTime() + credit * 1000));
+  session.pausedSeconds = (session.pausedSeconds ?? 0) + credit;
+  session.pausedAt = null;
+}
+
 /** Adds a resident turn produced outside the engine (live AI or scripted fallback). No-op unless awaiting one. */
 export function commitResidentTurn(s: DemoState, sessionId: string, reply: { utterance: string; endConversation: boolean }, source: 'generated' | 'scripted', now = new Date(), evaluateOnEnd = true): PracticeSession {
   const session = ownActiveSession(s, sessionId);
   if (session.status !== 'active' || session.turns.at(-1)?.speaker !== 'rep') return session;
+  resumeClock(session, now);
   if (session.deadlineAt && now > new Date(session.deadlineAt)) {
     endSession(s, sessionId, { idempotencyKey: `auto-${sessionId}` }, now, 'time_limit', evaluateOnEnd);
     return session;
@@ -551,6 +563,8 @@ export function requestDeletion(s: DemoState, scope: string, now = new Date()) {
 /** Expires sessions past their deadline (demo equivalent of the maintenance job). */
 export function recoverExpired(s: DemoState, now = new Date()) {
   for (const x of s.sessions) {
+    // A live-AI reply in progress pauses the clock (up to the credit cap).
+    if (x.pausedAt && now.getTime() - new Date(x.pausedAt).getTime() < LIMITS.pauseCreditMaxSeconds * 1000) continue;
     if (x.status === 'active' && x.deadlineAt && now > new Date(x.deadlineAt)) {
       const prev = s.currentUserId;
       s.currentUserId = x.repId;

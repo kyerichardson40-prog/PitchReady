@@ -141,6 +141,8 @@ export const campaignPackSchema = z.object({
     customer_label: z.string().trim().min(2).max(30).regex(/^[A-Za-z][A-Za-z '-]*$/, 'Use a plain word such as customer or prospect'),
     good_outcome: boundedText(160),
   }).strict().optional(),
+  /** Length of a full practice session in minutes (drills stay 60 seconds). */
+  practice_minutes: z.union([z.literal(3), z.literal(5), z.literal(10)]).optional(),
 }).strict();
 
 export const rubricDimensionsSchema = z.array(z.object({

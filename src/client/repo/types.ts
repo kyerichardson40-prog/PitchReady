@@ -1,3 +1,4 @@
+import type { PracticeMinutes } from '../../../lib/domain/limits.ts';
 import type { SalesContext } from '../../../lib/domain/sales.ts';
 import type { CampaignPack, MustSay, ObjectionAnswer, Drill, DrillKey, EvaluationResult, FeedbackReport, ManagerReview, PracticeSession, RubricVersion, Scenario, ScenarioKey } from '../../../lib/domain/types.ts';
 import type { TranscriptTurn } from '../../../lib/domain/transcript.ts';
@@ -13,6 +14,8 @@ export interface AppContextData {
     /** The agency's say rules (published version). */
     mustSay: MustSay[]; neverSay: string[]; forbiddenClaims: string[]; objectionAnswers: ObjectionAnswer[];
     salesContext: SalesContext;
+    /** Full practice session length chosen by the manager (3, 5 or 10). */
+    practiceMinutes: PracticeMinutes;
   } | null;
   rubricVersion: string | null;
   scenarios: Scenario[];
@@ -114,7 +117,7 @@ export interface LiveAiEngine {
   /** Shown as the evaluation's model, e.g. "Claude via claude.ai (preview)". */
   readonly label: string;
   readonly promptVersion: string;
-  residentReply(input: { scenario: Scenario; drill: Drill | null; campaign: CampaignPack; transcript: TranscriptTurn[] }): Promise<{ utterance: string; endConversation: boolean }>;
+  residentReply(input: { scenario: Scenario; drill: Drill | null; campaign: CampaignPack; transcript: TranscriptTurn[]; repliesLeft?: number }): Promise<{ utterance: string; endConversation: boolean }>;
   /** Validated with validateEvaluation, with one repair attempt. */
   evaluate(input: { scenario: Scenario; drill: Drill | null; campaign: CampaignPack; rubric: RubricVersion; transcript: TranscriptTurn[]; transcriptRevision: number }): Promise<{ ok: true; result: EvaluationResult } | { ok: false; errors: string[] }>;
 }

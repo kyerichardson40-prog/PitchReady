@@ -58,6 +58,7 @@ export const SALES_TEMPLATES: SalesTemplate[] = [
       sample_unknown_answer: "I don't want to guess on that. I'll check and come back to you with the exact answer.",
       sample_disengagement: 'No problem at all. Thanks for your time, and have a good day.',
       sales_context: { channel: 'phone', offer: 'a full-fibre broadband upgrade', customer_label: 'customer', good_outcome: 'an informed decision, or a call back at a better time' },
+      practice_minutes: 5,
     },
     scenarios: [
       { title: 'Picks up mid-task', persona: 'Jordan, cooking dinner', opener: 'Hello? Sorry, who is this?', objection: "Wasn't expecting a call", goal: 'Introduce yourself and the reason for the call clearly, and check it is a good time.', allowedEnding: 'A short explanation with permission, or arranging a better time to call.', behaviour: 'Distracted and a little wary; warms up if the rep is clear and asks permission; ends the call if the rep talks over them.', skill: 'Opening a call' },
@@ -96,6 +97,7 @@ export const SALES_TEMPLATES: SalesTemplate[] = [
       sample_unknown_answer: "I'm not certain on that one, so let me check rather than guess.",
       sample_disengagement: 'No problem at all. Enjoy the new laptop.',
       sales_context: { channel: 'retail', offer: 'an optional 3-year Care Plan', customer_label: 'customer', good_outcome: 'an informed choice, with no pressure either way' },
+      practice_minutes: 5,
     },
     scenarios: [
       { title: 'Just browsing', persona: 'Leah, looking at laptops', opener: "I'm just looking, thanks.", objection: 'Not ready to talk', goal: 'Respect that, offer help lightly, and leave the door open.', allowedEnding: 'Leah asks a question, or carries on browsing on her own.', behaviour: 'Polite but wants space; opens up a little if the rep is relaxed and brief.', skill: 'Light-touch approach' },
@@ -134,6 +136,7 @@ export const SALES_TEMPLATES: SalesTemplate[] = [
       sample_unknown_answer: "Good question. I don't want to guess, so I'll check and email you the answer.",
       sample_disengagement: "Understood, it doesn't sound like the right time. Thanks for seeing me. Can I leave my details in case that changes?",
       sales_context: { channel: 'b2b-meeting', offer: 'bookkeeping software for small businesses', customer_label: 'prospect', good_outcome: 'an agreed next step, such as a trial or follow-up, or a clear no' },
+      practice_minutes: 10,
     },
     scenarios: [
       { title: 'Five minutes between meetings', persona: 'Helen, café owner', opener: "I've got five minutes. What is it?", objection: 'Very short on time', goal: 'Get to the point, ask one good question and agree a next step.', allowedEnding: 'A short follow-up is agreed, or Helen politely ends it.', behaviour: 'Brisk and practical; values directness; switches off at jargon.', skill: 'Getting to the point' },
@@ -172,6 +175,7 @@ export const SALES_TEMPLATES: SalesTemplate[] = [
       sample_unknown_answer: "I can't promise a figure without the survey, and I'd rather not guess. I'll check and confirm in writing.",
       sample_disengagement: "That's absolutely fine. Thanks for your time, and I'll see myself out.",
       sales_context: { channel: 'field', offer: 'a free solar survey and written quote', customer_label: 'homeowner', good_outcome: 'a completed survey, or a clear decision not to go ahead' },
+      practice_minutes: 5,
     },
     scenarios: [
       { title: 'Second thoughts at the door', persona: 'Paul, booked the visit', opener: "I booked this, but I'm not sure now.", objection: 'Cold feet', goal: 'Reassure without pressure: explain the survey is free with no obligation, and let him decide.', allowedEnding: 'Paul goes ahead with the survey, or reschedules, or cancels politely.', behaviour: 'Hesitant; relaxes if the rep is calm and honest; firms up against pressure.', skill: 'Reassurance without pressure' },

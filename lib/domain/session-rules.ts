@@ -27,9 +27,12 @@ export function residentDirective(opts: {
   return { kind: 'call_resident' };
 }
 
-/** Elapsed seconds charged for a usable session: wall time from start, capped at the session maximum. */
-export function chargeableSeconds(startedAt: Date | null, endedAt: Date, maxSeconds: number): number {
+/**
+ * Elapsed seconds charged for a usable session: wall time from start, minus time the clock was paused
+ * while the AI worked, capped at the session maximum.
+ */
+export function chargeableSeconds(startedAt: Date | null, endedAt: Date, maxSeconds: number, pausedSeconds = 0): number {
   if (!startedAt) return 0;
-  const s = Math.ceil((endedAt.getTime() - startedAt.getTime()) / 1000);
+  const s = Math.ceil((endedAt.getTime() - startedAt.getTime()) / 1000) - pausedSeconds;
   return Math.max(0, Math.min(maxSeconds, s));
 }

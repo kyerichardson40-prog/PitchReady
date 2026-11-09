@@ -1,5 +1,5 @@
 import { getScenario } from '../../lib/content/scenarios.ts';
-import { LIMITS, normaliseAudioMime } from '../../lib/domain/limits.ts';
+import { LIMITS, limitsOfSession, normaliseAudioMime } from '../../lib/domain/limits.ts';
 import { residentDirective } from '../../lib/domain/session-rules.ts';
 import { transcriptAtRevision } from '../../lib/domain/transcript.ts';
 import type { CampaignPack, PracticeSession, Scenario } from '../../lib/domain/types.ts';
@@ -102,7 +102,7 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
   if (session.status !== 'active' || last?.speaker !== 'rep') return { session, residentAudio: null, notices };
 
   const transcript = transcriptAtRevision(session.turns, [], 1);
-  const directive = residentDirective({ scenarioKey: session.scenarioKey, drillKey: session.drillKey, transcript, maxRepTurns: session.kind === 'drill' ? LIMITS.drillMaxRepTurns : LIMITS.fullSessionMaxRepTurns });
+  const directive = residentDirective({ scenarioKey: session.scenarioKey, drillKey: session.drillKey, transcript, maxRepTurns: limitsOfSession(session).maxRepTurns });
   if (directive.kind === 'end') {
     const ended = await svc.rpc<PracticeSession>('commit_resident_turn', { session_id: session.id, request_id: requestId, text: null, end: true, end_reason: directive.reason === 'turn_limit' ? 'turn_limit' : 'resident_ended' });
     await runEvaluationJob(session.id).catch(() => undefined);
@@ -120,7 +120,7 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
   try {
     const opId = `resident:${session.id}:${requestId}`;
     reply = await metered(p, { sessionId: session.id, operationId: opId, operation: 'resident', model: p.resident.model, sizeHint: JSON.stringify(transcript).length },
-      () => p.resident.reply({ scenario, drillKey: session.drillKey, campaign, transcript, operationId: opId }));
+      () => p.resident.reply({ scenario, drillKey: session.drillKey, campaign, transcript, repliesLeft: limitsOfSession(session).maxRepTurns - transcript.filter((t) => t.speaker === 'rep').length, operationId: opId }));
   } catch (e) {
     // Documented policy (ARCHITECTURE.md): a resident outage stops practice and refunds the session's allowance.
     // Uncertain attempts are recorded, never silently reissued.

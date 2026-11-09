@@ -1,3 +1,4 @@
+import { limitsOfSession, practiceMinutesOf } from '../../../lib/domain/limits.ts';
 import { salesContextOf } from '../../../lib/domain/sales.ts';
 import * as E from '../../../lib/demo/engine.ts';
 import { getDrill } from '../../../lib/content/scenarios.ts';
@@ -98,6 +99,7 @@ export class DemoRepository implements Repository {
           version: pub.version, name: pub.pack.name, fictional: pub.pack.fictional, organisation: pub.pack.organisation, facts: pub.pack.approved_facts,
           mustSay: pub.pack.must_say ?? [], neverSay: pub.pack.never_say ?? [], forbiddenClaims: pub.pack.forbidden_claims, objectionAnswers: pub.pack.objection_answers ?? [],
           salesContext: salesContextOf(pub.pack),
+          practiceMinutes: practiceMinutesOf(pub.pack),
         },
         rubricVersion: pub.rubric.version,
         scenarios: me.role === 'rep' ? E.allowedScenarios(s, me.id) : s.scenarios.filter((x) => !x.archived),
@@ -121,12 +123,13 @@ export class DemoRepository implements Repository {
     if (first.status === 'active' && first.turns.at(-1)?.speaker === 'rep') {
       const c = await this.run((s) => {
         const { session, pack, transcript } = E.evaluationInputs(s, id);
-        return { scenario: E.findScenario(this.load(), session.scenarioKey)!, drill: session.drillKey ? getDrill(session.drillKey) ?? null : null, campaign: pack, transcript, scenarioKey: session.scenarioKey, drillKey: session.drillKey };
+        return { scenario: E.findScenario(this.load(), session.scenarioKey)!, drill: session.drillKey ? getDrill(session.drillKey) ?? null : null, campaign: pack, transcript, scenarioKey: session.scenarioKey, drillKey: session.drillKey,
+          repliesLeft: limitsOfSession(session).maxRepTurns - transcript.filter((t) => t.speaker === 'rep').length };
       });
       let reply: { utterance: string; endConversation: boolean };
       let source: 'generated' | 'scripted' = 'generated';
       try {
-        reply = await this.live!.residentReply({ scenario: c.scenario, drill: c.drill, campaign: c.campaign, transcript: c.transcript });
+        reply = await this.live!.residentReply({ scenario: c.scenario, drill: c.drill, campaign: c.campaign, transcript: c.transcript, repliesLeft: c.repliesLeft });
       } catch (e) {
         this.noteLiveFailure(e);
         reply = demoResidentReply({ scenarioKey: c.scenarioKey, drillKey: c.drillKey, transcript: c.transcript });

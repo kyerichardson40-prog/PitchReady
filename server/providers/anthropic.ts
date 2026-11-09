@@ -53,7 +53,9 @@ export class AnthropicResident implements ResidentModel {
       SALES_SETTING: salesSettingForAi(salesContextOf(input.campaign)),
       SCENARIO: input.scenario, DRILL: input.drillKey,
       APPROVED_CAMPAIGN: { name: input.campaign.name, organisation: input.campaign.organisation, fictional: input.campaign.fictional, approved_facts: input.campaign.approved_facts },
-      TRANSCRIPT_UNTRUSTED: transcriptData(input.transcript.slice(-24)),
+      REPLIES_LEFT: input.repliesLeft ?? null,
+      // Whole conversation (up to 40 replies each side) so the customer remembers what was said.
+      TRANSCRIPT_UNTRUSTED: transcriptData(input.transcript.slice(-90)),
       TASK: 'Reply as the customer to the latest rep turn.',
     };
     const { parsed, usage } = await callClaude({ apiKey: this.apiKey, model: this.model, system: RESIDENT_SYSTEM_PROMPT, messages: [{ role: 'user', content: JSON.stringify(data) }], schema: RESIDENT_JSON_SCHEMA, maxTokens: 300, timeoutMs: 20_000, rateCard: this.rateCard });

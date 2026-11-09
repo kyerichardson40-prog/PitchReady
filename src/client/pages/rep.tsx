@@ -55,7 +55,7 @@ export function PracticePage() {
         )}
       </div>
       {active && <div className="alert warn">You have a practice in progress. <Link to={`/sessions/${active.id}`}>Open it</Link> or let it time out.</div>}
-      {remaining !== null && remaining < 180 && <div className="alert warn">Not enough team allowance left to start a full three-minute session. Speak to your manager.</div>}
+      {remaining !== null && remaining < (ctx.campaign?.practiceMinutes ?? 3) * 60 && <div className="alert warn">Not enough team allowance left to start a full {ctx.campaign?.practiceMinutes ?? 3}-minute session. Speak to your manager.</div>}
       <h2>Choose a scenario</h2>
       <ul className="door-list">
         {ctx.scenarios.map((s, i) => (
