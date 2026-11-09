@@ -20,7 +20,7 @@ const count = (out: string) => Number(out.trim().split('\n').at(-1));
 describe('retry drills in any sales setting', () => {
   test('a drill from a template scenario keeps that person and uses the neutral opener', async () => {
     const sc = getTemplate('telesales')!.scenarios[1]!;
-    const saved: any = await u(f.A.manager).rpc('save_scenario', sc);
+    const saved: any = await u(f.A.manager).rpc('save_scenario', { ...sc });
     const s: any = await u(f.A.rep1).rpc('start_session', { scenario_key: saved.key, request_id: key('tpl') });
     await u(f.A.rep1).rpc('end_session', { session_id: s.id });
     const drill: any = await u(f.A.rep1).rpc('start_session', { scenario_key: saved.key, drill_key: 'already-donate', parent_session_id: s.id, request_id: key('drill') });

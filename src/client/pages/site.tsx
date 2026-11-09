@@ -199,15 +199,22 @@ export function AboutPage() {
   const cta = useCtaContext();
   return (
     <div className="lp site">
-      <PageHero paint="mustard" title="About PitchReady" lede="Why it exists, who’s behind it, and what we believe about training people to sell." />
+      <PageHero paint="mustard" title="About PitchReady" lede="Built by a door-to-door salesperson and trainer, for every kind of sales team." />
       <section className="site-section" aria-labelledby="a-story">
         <div className="lp-wrap site-about">
-          <div className="site-portrait" aria-hidden="true"><span><Placeholder>Photo</Placeholder></span></div>
+          {/* A founder photo can replace the initials later. */}
+          <div className="site-portrait" aria-hidden="true"><span className="site-initials">KR</span></div>
           <div className="site-prose">
             <h2 id="a-story" className="lp-h2">The story</h2>
-            <p><Placeholder>Hi, I’m [your name]. I’ve worked in [kinds of sales] for [number] years, [as a rep, team leader, trainer…], based in [city or region].</Placeholder></p>
-            <p><Placeholder>Over that time I saw [the problem: e.g. new starters being sent out after a short training session, learning on real customers, and managers having no way to hear how they sounded].</Placeholder></p>
-            <p><Placeholder>I built PitchReady so [what you want for reps and managers: e.g. every rep can practise the hard moments safely before they happen for real, and every manager can coach from what was actually said].</Placeholder></p>
+            <p>I’m Kye Richardson. I’ve spent around two and a half years in door-to-door sales and paid fundraising. In that time I trained more than 100 new starters and reached the top of the national sales rankings on several occasions.</p>
+            <p>I built PitchReady because I saw how hard it can be for new reps to build confidence and improve their pitch, and how little managers could see of what their reps were actually saying, or where they needed support.</p>
+            <p>PitchReady gives reps a place to practise, handle objections and develop their delivery before they speak to customers, and gives managers a clear picture of where to help.</p>
+            <p className="site-signoff"><strong>Kye Richardson</strong><span>Founder · Kent, UK</span></p>
+            <ul className="site-facts">
+              <li><strong>2½ years</strong><span>in door-to-door sales and paid fundraising</span></li>
+              <li><strong>100+</strong><span>new starters trained</span></li>
+              <li><strong>Top national rankings</strong><span>for sales, on several occasions</span></li>
+            </ul>
           </div>
         </div>
       </section>
