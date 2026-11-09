@@ -382,7 +382,7 @@ export function TermsPage() {
           <p>You are responsible for establishing a lawful basis for your use of users’ data, providing appropriate privacy information, agreeing manager access and the retention period with us, and meeting applicable employment and data-protection obligations. This does not reduce our own obligations under data-protection law.</p>
           <p>The DPA will specify processing instructions, data categories, security measures, confidentiality, assistance with individual rights and security incidents, approved subprocessors, international-transfer safeguards, audit arrangements and deletion or return of data. Changes to our providers will follow the notice and objection process in the DPA. Our current providers are:</p>
           <ul>
-            <li><strong>Railway</strong>: hosting the website and app (<Todo>hosting region</Todo>).</li>
+            <li><strong>Railway</strong>: hosting the website and app (EU, Amsterdam, Netherlands).</li>
             <li><strong>Supabase</strong>: database and sign-in, stored in the EU (Ireland).</li>
             <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback (United States).</li>
             <li><strong>Deepgram</strong>: speech-to-text and reading the customer’s lines aloud (United States).</li>
@@ -497,7 +497,7 @@ export function DpaPage() {
           <p><strong>During the agreement:</strong> practice sessions, including transcripts, feedback, review notes and corrections, are deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days agreed in your order. Deletion requests from reps are carried out automatically.</p>
           <p><strong>At the end:</strong> managers can download their team’s data at any time before the agreement ends, and for 30 days afterwards we will provide an export on request. We will then delete the remaining customer personal data, including user accounts, within 60 days after the agreement ends, unless the law requires us to keep it.</p>
           <p><strong>What we keep:</strong> records of practice time used (with no conversation content), and security and audit records of actions taken in the service, which we keep for billing, accounting and security purposes for as long as the law requires or allows, protected and used only for those purposes.</p>
-          <p><strong>Backups:</strong> <Todo>backup schedule: how long backups are kept, and when deleted data drops out of them</Todo>. Data that has been deleted but remains in a backup is put beyond ordinary use until the backup expires. If a backup is ever restored, earlier deletions will be applied again.</p>
+          <p><strong>Backups:</strong> we do not currently keep restorable backups of customer personal data. Our database provider may keep its own short-term backups for disaster recovery, which we cannot access. If we add restorable backups, they will be kept for no more than 7 days, so deleted data drops out of them within 7 days; until then it is put beyond ordinary use. If a backup is ever restored, earlier deletions will be applied again.</p>
 
           <h2>12. Information and audits</h2>
           <p>We will make available to you the information reasonably needed to show that we meet our obligations under this DPA, including by answering reasonable security questionnaires.</p>
@@ -515,7 +515,7 @@ export function DpaPage() {
             <table className="rtable">
               <thead><tr><th>Subprocessor</th><th>What it does</th><th>Data</th><th>Location</th></tr></thead>
               <tbody>
-                <tr><td className="rt-main"><strong>Railway</strong></td><td data-label="What it does">Hosts the PitchReady website and app</td><td data-label="Data">All data passes through it in transit; logs may contain IP addresses</td><td data-label="Location"><Todo>hosting region</Todo></td></tr>
+                <tr><td className="rt-main"><strong>Railway</strong></td><td data-label="What it does">Hosts the PitchReady website and app</td><td data-label="Data">All data passes through it in transit; logs may contain IP addresses</td><td data-label="Location">EU (Amsterdam, Netherlands)</td></tr>
                 <tr><td className="rt-main"><strong>Supabase</strong></td><td data-label="What it does">Database and sign-in</td><td data-label="Data">All stored customer personal data</td><td data-label="Location">EU (Ireland)</td></tr>
                 <tr><td className="rt-main"><strong>Anthropic</strong></td><td data-label="What it does">AI that plays the customer and writes feedback</td><td data-label="Data">Practice transcripts and the campaign material needed to respond and give feedback</td><td data-label="Location">United States</td></tr>
                 <tr><td className="rt-main"><strong>Deepgram</strong></td><td data-label="What it does">Speech-to-text, and reading the customer’s lines aloud</td><td data-label="Data">Voice recordings of practice turns, and the customer’s lines as text. Every request opts out of Deepgram’s model improvement programme, so recordings are kept only as long as needed to process them and are not used for training.</td><td data-label="Location">United States</td></tr>
@@ -532,9 +532,9 @@ export function DpaPage() {
             <li><strong>Keys and secrets:</strong> keys for the AI and speech providers are kept on the server and never sent to browsers.</li>
             <li><strong>Data minimisation:</strong> voice recordings are not stored by PitchReady; practice data is deleted automatically after the retention period; deletion requests are carried out automatically.</li>
             <li><strong>Records:</strong> an audit log records key actions, such as invitations, access changes and deletions.</li>
-            <li><strong>Our own access:</strong> administrative access to PitchReady’s systems is limited to the people who need it. <Todo>confirm two-factor sign-in is on for the Railway, Supabase, GitHub, Anthropic, Deepgram and Resend accounts</Todo>.</li>
+            <li><strong>Our own access:</strong> administrative access to PitchReady’s systems is limited to the people who need it, and two-factor sign-in is required on every account used to run PitchReady (hosting, database, code, AI, speech and email providers).</li>
             <li><strong>Changes:</strong> changes are tested automatically and tried on a separate preview version before they go live.</li>
-            <li><strong>Backups and recovery:</strong> <Todo>backup arrangements</Todo>.</li>
+            <li><strong>Backups:</strong> no restorable backups are kept at present; if added, they will be kept for no more than 7 days (see section 11).</li>
           </ul>
         </div>
       </section>
