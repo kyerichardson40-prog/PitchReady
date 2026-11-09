@@ -13,6 +13,7 @@ import { FeedbackView } from '../components/FeedbackView.tsx';
 import { useManagerGuard } from './manager-guard.tsx';
 import { RepDirectory } from './manager-team.tsx';
 import { Transcript } from '../components/Transcript.tsx';
+import { collectTeamExport, downloadFile, exportFileName, teamExportCsv } from '../team-export.ts';
 
 
 const SAMPLE_LABELS = { sample_opening: 'Opening line', sample_explanation: 'Explaining the campaign', sample_unknown_answer: "When you don't know the answer", sample_disengagement: 'Leaving politely' } as const;
@@ -128,6 +129,7 @@ export function ManagerRepsPage() {
               </div>
             )}
           </div>
+          <TeamDataExport />
           <div className="card table-wrap">
             <h2>Invitations</h2>
             {r.invitations.length === 0 ? <p className="muted">No invitations.</p> : (
@@ -145,6 +147,37 @@ export function ManagerRepsPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Lets a manager take a copy of the team's practice data (terms section 13). */
+function TeamDataExport() {
+  const { repo, ctx } = useApp();
+  const [busy, setBusy] = useState<'csv' | 'json' | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const run = async (kind: 'csv' | 'json') => {
+    setBusy(kind); setErr(null); setDone(null);
+    try {
+      const x = await collectTeamExport(repo, { agencyName: ctx?.agencyName ?? null, retentionDays: ctx?.retentionDays ?? null });
+      const name = exportFileName(x, kind);
+      if (kind === 'csv') downloadFile(name, teamExportCsv(x), 'text/csv;charset=utf-8');
+      else downloadFile(name, JSON.stringify(x, null, 2), 'application/json');
+      setDone(`Downloaded ${x.sessions.length} practice session${x.sessions.length === 1 ? '' : 's'} as ${name}.`);
+    } catch (e: any) { setErr(e.message ?? 'Could not build the download. Please try again.'); }
+    finally { setBusy(null); }
+  };
+  return (
+    <div className="card">
+      <h2>Download your team’s data</h2>
+      <p className="small muted">A copy of every finished practice session we still hold: transcripts (with your corrections), scores, feedback, rep reports and your review notes. Sessions are deleted after {ctx?.retentionDays ?? 30} days, so download before then if you want to keep them.</p>
+      {err && <ErrorBox message={err} />}
+      {done && <p className="small" role="status">{done}</p>}
+      <div className="row">
+        <button className="btn primary" disabled={busy !== null} onClick={() => void run('csv')}>{busy === 'csv' ? 'Preparing…' : 'Spreadsheet (CSV)'}</button>
+        <button className="btn" disabled={busy !== null} onClick={() => void run('json')}>{busy === 'json' ? 'Preparing…' : 'Full data (JSON)'}</button>
+      </div>
     </div>
   );
 }

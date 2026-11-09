@@ -59,7 +59,7 @@ export class ApiRepository implements Repository {
 
 export const auth = {
   signIn: (email: string, password: string) => post<{ ok: true }>('/api/auth/sign-in', { email, password }),
-  signUp: (email: string, password: string) => post<{ ok: true; confirmationRequired: boolean }>('/api/auth/sign-up', { email, password }),
+  signUp: (email: string, password: string) => post<{ ok: true; confirmationRequired: boolean }>('/api/auth/sign-up', { email, password, acceptTerms: true }),
   signOut: () => post<{ ok: true }>('/api/auth/sign-out', {}),
   adoptSession: (accessToken: string, refreshToken: string) => post<{ ok: true }>('/api/auth/session', { accessToken, refreshToken }),
   checkInvite: (token: string) => post<{ status: string; email?: string; role?: string; agencyName?: string }>('/api/invitations/check', { token }),

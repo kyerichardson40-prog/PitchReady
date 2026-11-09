@@ -130,3 +130,27 @@ test('rep database: search, profile statistics, and deactivation from the profil
   assert.deepEqual(errors, []);
   await page.context().close();
 });
+
+test('team data download: CSV and JSON of the team’s finished sessions', async () => {
+  const { page, errors } = await fresh();
+  await demoSignIn(page, server.url + '/', 'manager', 'Riley');
+  await page.getByRole('link', { name: 'Team', exact: true }).click();
+  await page.getByRole('heading', { name: 'Download your team’s data' }).waitFor();
+  const [csvDl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Spreadsheet (CSV)' }).click()]);
+  assert.match(csvDl.suggestedFilename(), /^pitchready-.+\.csv$/);
+  const csv = await (await import('node:fs/promises')).readFile((await csvDl.path())!, 'utf8');
+  assert.ok(csv.startsWith('﻿Session ID,Rep,Scenario'));
+  assert.ok(csv.split('\r\n').length > 2, 'has session rows');
+  await page.getByRole('status').filter({ hasText: /^Downloaded \d+ practice session/ }).waitFor();
+  const [jsonDl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Full data (JSON)' }).click()]);
+  const data = JSON.parse(await (await import('node:fs/promises')).readFile((await jsonDl.path())!, 'utf8'));
+  assert.equal(data.format, 'pitchready-team-export');
+  assert.ok(data.sessions.length > 0 && Array.isArray(data.sessions[0].session.turns));
+  await page.screenshot({ path: '/tmp/team-export.png', fullPage: false });
+  await page.goto(server.url + '/terms');
+  await page.getByRole('heading', { name: '10. Personal data' }).waitFor();
+  await page.getByRole('heading', { name: '10. Personal data' }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: '/tmp/terms.png' });
+  assert.deepEqual(errors, []);
+  await page.context().close();
+});

@@ -74,6 +74,7 @@ test('Deepgram STT: raw audio body, Token auth, transcript/duration/request_id p
   const out = await stt.transcribe({ audio: new Uint8Array([1, 2, 3]), mimeType: 'audio/mp4', operationId: 'o' });
   assert.equal(out.text, 'hello there');
   assert.match(last!.url, /^https:\/\/api\.deepgram\.com\/v1\/listen\?model=stt-x/);
+  assert.equal(new URL(last!.url).searchParams.get('mip_opt_out'), 'true');
   assert.equal((last!.init.headers as any).authorization, 'Token dgkey');
   assert.equal((last!.init.headers as any)['content-type'], 'audio/mp4');
   assert.equal(out.usage.requestId, 'dg-1');
@@ -87,6 +88,7 @@ test('Deepgram TTS: JSON text body, ≤2000 chars, headers parsed, unknown usage
   const tts = new DeepgramTTS('k', 'tts-x', card);
   const out = await tts.speak({ text: 'x'.repeat(2500), operationId: 'o' });
   assert.equal(JSON.parse(String(last!.init.body)).text.length, 2000);
+  assert.equal(new URL(last!.url).searchParams.get('mip_opt_out'), 'true');
   assert.equal(out.mimeType, 'audio/mpeg');
   assert.equal(out.usage.characters, 1500);
   assert.equal(out.usage.actualCostMinor, 3);

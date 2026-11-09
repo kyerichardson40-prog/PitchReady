@@ -90,9 +90,11 @@ export async function signInWithPassword(email: string, password: string): Promi
   return sessionCookies(r.body.access_token, r.body.refresh_token);
 }
 
-export async function signUp(email: string, password: string): Promise<{ confirmationRequired: boolean; cookies: string[] }> {
+export async function signUp(email: string, password: string, terms?: { version: string; acceptedAt: string }): Promise<{ confirmationRequired: boolean; cookies: string[] }> {
   const redirect = `${getConfig().env.APP_BASE_URL}/login`;
-  const r = await gotrue(`/signup?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email, password }) });
+  // The terms version and time are stored in the new user's metadata as the record of acceptance.
+  const data = terms ? { terms_version: terms.version, terms_accepted_at: terms.acceptedAt } : undefined;
+  const r = await gotrue(`/signup?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email, password, ...(data ? { data } : {}) }) });
   if (r.status === 429) throw new ApiError(429, 'rate_limited', 'Too many attempts. Please wait and try again.');
   if (r.status >= 400) throw new ApiError(400, 'signup_failed', 'Could not create the account. If you already have one, sign in instead.');
   if (r.body?.access_token) return { confirmationRequired: false, cookies: sessionCookies(r.body.access_token, r.body.refresh_token) };

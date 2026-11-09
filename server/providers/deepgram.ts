@@ -2,6 +2,8 @@
  * Deepgram REST adapters (server-only), per developers.deepgram.com (checked 2026-11-06):
  *  - STT: POST https://api.deepgram.com/v1/listen?model=…  body = raw audio, Content-Type = audio MIME,
  *         transcript at results.channels[0].alternatives[0].transcript, metadata.duration, metadata.request_id
+ *  - Every request sets mip_opt_out=true: excluded from Deepgram's Model Improvement Program, so
+ *    audio and text are kept only as long as needed to process the request (no training on them).
  *  - TTS: POST https://api.deepgram.com/v1/speak?model=…  body = {"text": …}, returns audio
  *         (headers dg-request-id, dg-char-count). Aura models accept ≤ 2000 characters.
  * Auth header: `Authorization: Token <key>`. Model names come from DEEPGRAM_STT_MODEL / DEEPGRAM_TTS_MODEL.
@@ -19,7 +21,7 @@ export class DeepgramSTT implements SpeechToText {
   private key: string; private rateCard: RateCard | null;
   constructor(key: string, model: string, rateCard: RateCard | null) { this.key = key; this.model = model; this.rateCard = rateCard; }
   async transcribe(input: { audio: Uint8Array; mimeType: string; operationId: string }) {
-    const url = `${BASE}/listen?model=${encodeURIComponent(this.model)}&smart_format=true`;
+    const url = `${BASE}/listen?model=${encodeURIComponent(this.model)}&smart_format=true&mip_opt_out=true`;
     const res = await providerFetch(url, { method: 'POST', headers: { authorization: `Token ${this.key}`, 'content-type': input.mimeType }, body: input.audio as unknown as BodyInit }, 30_000, 'deepgram_stt');
     const body: any = await res.json().catch(() => null);
     const duration = typeof body?.metadata?.duration === 'number' ? body.metadata.duration : undefined;
@@ -40,7 +42,7 @@ export class DeepgramTTS implements TextToSpeech {
   constructor(key: string, model: string, rateCard: RateCard | null) { this.key = key; this.model = model; this.rateCard = rateCard; }
   async speak(input: { text: string; operationId: string }) {
     const text = input.text.slice(0, LIMITS.ttsMaxChars);
-    const res = await providerFetch(`${BASE}/speak?model=${encodeURIComponent(this.model)}`, {
+    const res = await providerFetch(`${BASE}/speak?model=${encodeURIComponent(this.model)}&mip_opt_out=true`, {
       method: 'POST', headers: { authorization: `Token ${this.key}`, 'content-type': 'application/json' }, body: JSON.stringify({ text }),
     }, 20_000, 'deepgram_tts');
     const audio = new Uint8Array(await res.arrayBuffer());

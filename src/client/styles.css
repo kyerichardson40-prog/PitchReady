@@ -757,3 +757,9 @@ label:has(> input[type="checkbox"]) { display: flex; flex-wrap: nowrap; align-it
   .lp-channel:hover .lp-icon { animation: none; }
 }
 .lp-channel { align-content: start; }
+
+/* Checkbox with a sentence beside it (sign-up terms). */
+label.check { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 500; line-height: 1.45; cursor: pointer; }
+label.check input[type="checkbox"] { width: 1.15rem; height: 1.15rem; margin-top: 0.15rem; flex: none; accent-color: var(--teal, #0f766e); }
+/* Unfinished items in draft legal pages. */
+mark.todo { background: #fdf0c2; color: var(--ink, #14213D); padding: 0 0.25em; border-radius: 4px; font-weight: 600; }

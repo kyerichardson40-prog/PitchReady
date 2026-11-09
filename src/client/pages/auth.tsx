@@ -14,6 +14,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<'in' | 'up'>(qs.get('signup') ? 'up' : 'in');
   const [email, setEmail] = useState(qs.get('email') ?? '');
   const [password, setPassword] = useState('');
+  const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(qs.get('signedOut') ? 'You have signed out.' : null);
@@ -67,6 +68,14 @@ export function LoginPage() {
         <div className="field"><label htmlFor="email">Email</label><input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
         <div className="field"><label htmlFor="pw">Password</label><input id="pw" type="password" autoComplete={mode === 'in' ? 'current-password' : 'new-password'} minLength={mode === 'up' ? 10 : 1} required value={password} onChange={(e) => setPassword(e.target.value)} />
           {mode === 'up' && <p className="hint">At least 10 characters.</p>}</div>
+        {mode === 'up' && (
+          <div className="field">
+            <label className="check">
+              <input type="checkbox" required checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+              <span>I agree to the <Link to="/terms">Terms and conditions</Link> and have read the <Link to="/privacy">Privacy notice</Link>.</span>
+            </label>
+          </div>
+        )}
         <button className="btn primary" type="submit" disabled={busy} style={{ width: '100%' }}>{busy ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}</button>
       </form>
       <p className="small">{mode === 'in' ? <>Invited but no account yet? <button className="btn link" onClick={() => setMode('up')}>Create an account</button></> : <>Already have an account? <button className="btn link" onClick={() => setMode('in')}>Sign in</button></>}</p>

@@ -86,3 +86,10 @@ Public pages: home, how it works, about, contact, terms (draft, not legally revi
 
 ## D32 — Contact form emails via Resend (9 Nov 2026)
 Each contact-form message is still saved in `contact_messages` first; then, if `RESEND_API_KEY` and `CONTACT_NOTIFY_EMAIL` are set, the server emails the owner through Resend's HTTP API (`server/services/notify.ts`, no SDK). Plain text only, subject flattened to one line, `reply_to` is the visitor so the owner can answer from their inbox. Best effort with an 8 s timeout: a failed email never fails the form, and only the HTTP status is logged. Resend was added to the privacy notice's provider list.
+
+## D33 — Terms draft backed by the app (9 Nov 2026)
+The new Terms page (draft for legal review; unfinished items highlighted) makes promises the app now keeps:
+- **No model training on audio:** every Deepgram request sets `mip_opt_out=true`.
+- **Export:** managers can download their team's finished sessions from the Team page as CSV (one row per session, corrected transcript, scores, feedback, reports, review notes; formula-safe cells) or full JSON. Built in the browser from the same reads the manager screens use (`src/client/team-export.ts`), so it never exposes more than the manager can already see and needs no new server route or database change.
+- **Recorded acceptance:** sign-up requires ticking the terms box; the server stores `terms_version` (`lib/content/legal.ts`, bump it when the terms change) and `terms_accepted_at` in the new user's Supabase metadata.
+- Retention is described as it really works: 30 days by default, 1–365 days agreed per customer and set by us.
