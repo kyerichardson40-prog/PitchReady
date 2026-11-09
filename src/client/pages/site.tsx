@@ -2,7 +2,6 @@
 /**
  * Public site pages: How it works, About, Contact, Terms, plus the shared footer and call-to-action
  * band. Same visual language as the landing page (painted doors, Bricolage headings).
- * Text inside <Placeholder> is waiting for the owner's real details.
  */
 import { useState, type ReactNode } from 'react';
 import { useApp } from '../app-context.tsx';
@@ -11,11 +10,6 @@ import { CHANNEL_INFO, SALES_CHANNELS } from '../../../lib/domain/sales.ts';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 
 const YEAR = new Date().getFullYear();
-
-/** Visible on the page until the owner sends the real wording. */
-function Placeholder({ children }: { children: ReactNode }) {
-  return <span className="placeholder" title="Placeholder: waiting for your details">{children}</span>;
-}
 
 export function SiteFooter() {
   return (
@@ -302,10 +296,10 @@ export function TermsPage() {
       <section className="site-section" aria-label="Terms">
         <div className="lp-wrap site-prose site-terms">
           <p className="alert warn">Draft for review. These terms have not yet been checked by a solicitor.</p>
-          <p className="small muted">Last updated: <Placeholder>[date]</Placeholder></p>
+          <p className="small muted">Last updated: 9 November 2026</p>
 
           <h2>1. Who we are</h2>
-          <p>PitchReady is provided by <Placeholder>[your name or business name, trading as PitchReady]</Placeholder>{' '}(“we”, “us”). <Placeholder>[If a company: registered in England and Wales, company number …, registered office …]</Placeholder> You can contact us using our <Link to="/contact">contact page</Link>.</p>
+          <p>PitchReady is provided by Kye Richardson trading as PitchReady (“we”, “us”), based in Kent, United Kingdom. You can contact us using our <Link to="/contact">contact page</Link>.</p>
 
           <h2>2. Who these terms are for</h2>
           <p>PitchReady is a service for businesses and organisations (“customers”) that train people to sell. These terms apply to the customer that signs up, and to everyone the customer invites (managers and reps, together “users”). The customer is responsible for its users following these terms. PitchReady is not offered to consumers for personal use.</p>
@@ -337,7 +331,7 @@ export function TermsPage() {
           <p>You keep ownership of the material you add, such as campaign information, rules, scenarios and practice conversations. You give us permission to store and process it only to provide, secure and improve the service for you. You are responsible for making sure your campaign information is accurate and that you are allowed to use it.</p>
 
           <h2>8. Personal data</h2>
-          <p>For users’ practice data, the customer decides how it is used and we process it on the customer’s behalf, under a data processing agreement available on request. Recordings are converted to text and not kept by us; transcripts and feedback are deleted after the customer’s retention period (30 days by default). We use trusted providers to run the service, including for hosting, the database, speech-to-text and AI. More detail is in our privacy notice <Placeholder>[link once published]</Placeholder>.</p>
+          <p>For users’ practice data, the customer decides how it is used and we process it on the customer’s behalf, under a data processing agreement available on request. Recordings are converted to text and not kept by us; transcripts and feedback are deleted after the customer’s retention period (30 days by default). We use trusted providers to run the service, including for hosting, the database, speech-to-text and AI. A privacy notice with more detail will be published on this site; until then, you can ask us about your data through the <Link to="/contact">contact page</Link>.</p>
 
           <h2>9. Availability and changes</h2>
           <p>We aim to keep PitchReady available and working well, but we don’t promise it will always be uninterrupted or error-free. We may change or improve features. If a change significantly reduces what you’ve paid for, we’ll tell you in advance and you may end your plan.</p>
