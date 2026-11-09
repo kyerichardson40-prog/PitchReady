@@ -21,7 +21,7 @@ test('public pages open without signing in, link to each other, and fit a phone 
   await page.getByRole('link', { name: 'See the full process' }).click();
   await page.getByRole('heading', { name: 'How PitchReady works' }).waitFor();
   assert.equal(new URL(page.url()).pathname, '/how-it-works');
-  for (const [link, heading, path] of [['About us', 'About PitchReady', '/about'], ['Contact us', 'Contact us', '/contact'], ['Terms and conditions', 'Terms and conditions', '/terms'], ['Privacy', 'Privacy notice', '/privacy']] as const) {
+  for (const [link, heading, path] of [['About us', 'About PitchReady', '/about'], ['Contact us', 'Contact us', '/contact'], ['Terms and conditions', 'Terms and conditions', '/terms'], ['Privacy', 'Privacy notice', '/privacy'], ['Data processing', 'Data processing agreement', '/dpa']] as const) {
     await page.getByRole('navigation', { name: 'Site' }).getByRole('link', { name: link }).click();
     await page.getByRole('heading', { level: 1, name: heading }).waitFor();
     assert.equal(new URL(page.url()).pathname, path);

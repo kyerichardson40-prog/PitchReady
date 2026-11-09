@@ -26,6 +26,7 @@ export function SiteFooter() {
           <Link to="/contact">Contact us</Link>
           <Link to="/terms">Terms and conditions</Link>
           <Link to="/privacy">Privacy</Link>
+          <Link to="/dpa">Data processing</Link>
           <Link to="/login">Sign in</Link>
         </nav>
       </div>
@@ -377,7 +378,7 @@ export function TermsPage() {
           <p>Disclosure required by law is permitted. Where lawful, the disclosing party must give advance notice and limit disclosure to what is required. Confidentiality continues after the agreement ends for as long as the information remains confidential.</p>
 
           <h2>10. Personal data</h2>
-          <p>For personal data in practice content processed on your behalf, you are the controller and we are the processor. Our DPA <Todo>link to completed DPA</Todo> forms part of this agreement. We will not activate processing of that data until the DPA is incorporated into the agreement.</p>
+          <p>For personal data in practice content processed on your behalf, you are the controller and we are the processor. Our <Link to="/dpa">Data Processing Agreement</Link> forms part of this agreement. We will not activate processing of that data until the DPA is incorporated into the agreement.</p>
           <p>You are responsible for establishing a lawful basis for your use of users’ data, providing appropriate privacy information, agreeing manager access and the retention period with us, and meeting applicable employment and data-protection obligations. This does not reduce our own obligations under data-protection law.</p>
           <p>The DPA will specify processing instructions, data categories, security measures, confidentiality, assistance with individual rights and security incidents, approved subprocessors, international-transfer safeguards, audit arrangements and deletion or return of data. Changes to our providers will follow the notice and objection process in the DPA. Our current providers are:</p>
           <ul>
@@ -428,6 +429,113 @@ export function TermsPage() {
           <h2>18. Complaints and governing law</h2>
           <p>Contact the email in section 1 with any complaint. We will investigate in good faith and try to resolve it with you.</p>
           <p>The agreement is governed by the laws of England and Wales. The courts of England and Wales have exclusive jurisdiction over disputes arising out of or in connection with it, subject to any mandatory law that applies.</p>
+        </div>
+      </section>
+      <SiteFooter />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Data processing agreement */
+export function DpaPage() {
+  const email = <a href={`mailto:${TERMS_EMAIL}`}>{TERMS_EMAIL}</a>;
+  return (
+    <div className="lp site">
+      <PageHero paint="cobalt" title="Data processing agreement" lede="How PitchReady handles your team’s personal data on your behalf." />
+      <section className="site-section" aria-label="Data processing agreement">
+        <div className="lp-wrap site-prose site-terms">
+          <p className="alert warn">Draft for completion and legal review. This agreement has not yet been checked by a solicitor. Highlighted items are still to be completed.</p>
+          <p className="small muted">Effective date: {TERMS_EFFECTIVE_DATE}</p>
+
+          <h2>1. About this agreement</h2>
+          <p>This Data Processing Agreement (“DPA”) forms part of the agreement between Kye Richardson trading as PitchReady (“PitchReady”, “we”, “us”), as processor, and the customer named in the order (“you”), as controller, under our <Link to="/terms">Terms and conditions</Link>. It applies whenever we process personal data on your behalf in providing PitchReady.</p>
+          <p>It is intended to meet the requirements of Article 28 of the UK GDPR and the Data Protection Act 2018 (“data protection law”). If this DPA conflicts with the terms or an order on how personal data is processed, this DPA takes priority.</p>
+          <p>Words such as “controller”, “processor”, “personal data”, “personal data breach”, “processing” and “data subject” have the meanings given in data protection law. “Customer personal data” means personal data we process on your behalf under the agreement.</p>
+
+          <h2>2. Details of the processing</h2>
+          <ul>
+            <li><strong>Subject matter and purpose:</strong> providing PitchReady to you: sales-practice conversations with a simulated customer, automated feedback, manager review, team administration, and the support and security of the service.</li>
+            <li><strong>Duration:</strong> for the length of the agreement, and afterwards only until the data is returned or deleted under section 11.</li>
+            <li><strong>Nature of processing:</strong> collecting, storing, transcribing, analysing with AI, displaying to authorised users, exporting and deleting.</li>
+            <li><strong>Data subjects:</strong> your managers and reps, and people you invite to PitchReady.</li>
+            <li><strong>Types of personal data:</strong> names and work email addresses; role and team membership; invitation and sign-in records; practice transcripts (typed, or turned into text from speech); scores, feedback and concerns generated from them; manager review notes and transcript corrections; reports users make about feedback; practice usage records; and technical data such as IP addresses used briefly for security and rate limiting.</li>
+            <li><strong>Voice:</strong> spoken practice is sent to our speech-to-text provider for transcription and is not stored by PitchReady (see Annex A).</li>
+            <li><strong>Special category data:</strong> none is intended. Under our terms, users must not enter sensitive personal information, or real customers’ personal information, into PitchReady.</li>
+          </ul>
+
+          <h2>3. Your instructions</h2>
+          <p>We will process customer personal data only on your documented instructions. Your instructions are: the agreement (including this DPA), your use and configuration of PitchReady by your authorised managers, and any other reasonable written instructions you give us that are consistent with the agreement.</p>
+          <p>We will tell you promptly if we believe an instruction breaks data protection law. If the law requires us to process customer personal data in another way, we will tell you before doing so, unless the law forbids it.</p>
+          <p>You are responsible for having a lawful basis for the processing, for giving your users appropriate privacy information (including that managers can see their practice data), and for the accuracy of the instructions you give us.</p>
+
+          <h2>4. Confidentiality</h2>
+          <p>We will make sure that anyone we authorise to process customer personal data is bound by a duty of confidentiality and only has the access needed for their role.</p>
+
+          <h2>5. Security</h2>
+          <p>We will put in place and maintain appropriate technical and organisational measures to protect customer personal data, taking into account the risks involved, as required by Article 32 of the UK GDPR. Our current measures are listed in Annex B. We may update them, provided the overall level of protection does not go down.</p>
+
+          <h2>6. Subprocessors</h2>
+          <p>You give us general authorisation to use subprocessors. The subprocessors we use now are listed in Annex A.</p>
+          <p>We will give you at least 30 days’ notice by email before adding or replacing a subprocessor. If you object on reasonable data-protection grounds within that period, we will work with you in good faith to resolve the objection. If we cannot, you may end the affected service before the change takes effect and receive a refund of prepaid fees for the unused period, as set out in section 6 of the terms.</p>
+          <p>We will have a written contract with each subprocessor that gives customer personal data at least the same protection as this DPA. We remain responsible to you for our subprocessors’ performance of those obligations.</p>
+
+          <h2>7. International transfers</h2>
+          <p>Some subprocessors process data outside the UK, including in the United States (see Annex A). We will only transfer customer personal data outside the UK where data protection law allows it: to a country covered by UK adequacy regulations (including the UK Extension to the EU-US Data Privacy Framework, where the recipient is certified), or under the UK International Data Transfer Agreement or the UK Addendum to the EU Standard Contractual Clauses, with any supplementary measures needed.</p>
+
+          <h2>8. Helping you with individuals’ rights</h2>
+          <p>Taking into account the nature of the processing, we will help you respond to requests from individuals exercising their data protection rights. If we receive a request directly about customer personal data, we will pass it to you within five working days and will not answer it ourselves, except to acknowledge it and tell the person we have passed it on, unless you ask us to.</p>
+          <p>PitchReady also includes tools for this: managers can download their team’s practice data from the Team page, and reps can ask for their own practice data to be deleted from their Settings page.</p>
+
+          <h2>9. Personal data breaches</h2>
+          <p>We will tell you without undue delay, and in any case within 48 hours, after becoming aware of a personal data breach affecting customer personal data. We will give you the information we have, and more as it becomes available, including: what happened; the categories and approximate number of people and records affected; the likely consequences; and what we have done or propose to do about it.</p>
+          <p>We will take reasonable steps to contain and investigate the breach and reduce its effects. We will not notify the Information Commissioner’s Office or affected individuals on your behalf unless you ask us to or the law requires it.</p>
+
+          <h2>10. Other help we will give you</h2>
+          <p>Taking into account the nature of the processing and the information available to us, we will give you reasonable help with your security obligations, data protection impact assessments, and any prior consultation with the Information Commissioner’s Office relating to PitchReady.</p>
+
+          <h2>11. Keeping, returning and deleting data</h2>
+          <p><strong>During the agreement:</strong> practice sessions, including transcripts, feedback, review notes and corrections, are deleted automatically after your retention period: 30 days by default, or another period between 1 and 365 days agreed in your order. Deletion requests from reps are carried out automatically.</p>
+          <p><strong>At the end:</strong> managers can download their team’s data at any time before the agreement ends, and for 30 days afterwards we will provide an export on request. We will then delete the remaining customer personal data, including user accounts, within 60 days after the agreement ends, unless the law requires us to keep it.</p>
+          <p><strong>What we keep:</strong> records of practice time used (with no conversation content), and security and audit records of actions taken in the service, which we keep for billing, accounting and security purposes for as long as the law requires or allows, protected and used only for those purposes.</p>
+          <p><strong>Backups:</strong> <Todo>backup schedule: how long backups are kept, and when deleted data drops out of them</Todo>. Data that has been deleted but remains in a backup is put beyond ordinary use until the backup expires. If a backup is ever restored, earlier deletions will be applied again.</p>
+
+          <h2>12. Information and audits</h2>
+          <p>We will make available to you the information reasonably needed to show that we meet our obligations under this DPA, including by answering reasonable security questionnaires.</p>
+          <p>If that information is not enough, you (or an independent auditor you appoint who is bound by confidentiality) may audit our compliance once in any 12-month period, on at least 30 days’ written notice, during business hours, in a way that does not unreasonably disrupt our business, and at your cost. Additional audits are allowed after a personal data breach or where a regulator requires one. Audits do not extend to our subprocessors’ premises; for those, we will share the relevant reports and certifications that they make available.</p>
+
+          <h2>13. Liability and duration</h2>
+          <p>Each party’s liability under this DPA is subject to the limits in section 15 of the terms, which do not restrict individuals’ rights or a regulator’s powers under data protection law.</p>
+          <p>This DPA lasts for as long as we process customer personal data. Sections 9, 11 and 12 continue to apply after the agreement ends for as long as we still hold customer personal data.</p>
+
+          <h2>14. Contact</h2>
+          <p>For anything about this DPA, including breach notices and objections to subprocessors, email {email}. We will send notices to the customer administrator or billing email you give us.</p>
+
+          <h2>Annex A: Subprocessors</h2>
+          <div className="table-wrap">
+            <table className="rtable">
+              <thead><tr><th>Subprocessor</th><th>What it does</th><th>Data</th><th>Location</th></tr></thead>
+              <tbody>
+                <tr><td className="rt-main"><strong>Railway</strong></td><td data-label="What it does">Hosts the PitchReady website and app</td><td data-label="Data">All data passes through it in transit; logs may contain IP addresses</td><td data-label="Location"><Todo>hosting region</Todo></td></tr>
+                <tr><td className="rt-main"><strong>Supabase</strong></td><td data-label="What it does">Database and sign-in</td><td data-label="Data">All stored customer personal data</td><td data-label="Location">EU (Ireland)</td></tr>
+                <tr><td className="rt-main"><strong>Anthropic</strong></td><td data-label="What it does">AI that plays the customer and writes feedback</td><td data-label="Data">Practice transcripts and the campaign material needed to respond and give feedback</td><td data-label="Location">United States</td></tr>
+                <tr><td className="rt-main"><strong>Deepgram</strong></td><td data-label="What it does">Speech-to-text, and reading the customer’s lines aloud</td><td data-label="Data">Voice recordings of practice turns, and the customer’s lines as text. Every request opts out of Deepgram’s model improvement programme, so recordings are kept only as long as needed to process them and are not used for training.</td><td data-label="Location">United States</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Annex B: Security measures</h2>
+          <ul>
+            <li><strong>Encryption:</strong> all connections use HTTPS. Data is stored with our database provider, which encrypts it at rest.</li>
+            <li><strong>Separation between customers:</strong> database row-level security means each organisation can only reach its own data. Reps can only see their own practice; managers can only see their own team’s.</li>
+            <li><strong>Sign-in:</strong> passwords are handled by our database provider’s sign-in service and stored hashed, never in plain text. Sign-in cookies are HTTP-only, secure and same-site. Accounts are by invitation only.</li>
+            <li><strong>Abuse protection:</strong> rate limits on sign-in, sign-up, the contact form and practice; strict content security policy and security headers; requests from other websites are rejected.</li>
+            <li><strong>Keys and secrets:</strong> keys for the AI and speech providers are kept on the server and never sent to browsers.</li>
+            <li><strong>Data minimisation:</strong> voice recordings are not stored by PitchReady; practice data is deleted automatically after the retention period; deletion requests are carried out automatically.</li>
+            <li><strong>Records:</strong> an audit log records key actions, such as invitations, access changes and deletions.</li>
+            <li><strong>Our own access:</strong> administrative access to PitchReady’s systems is limited to the people who need it. <Todo>confirm two-factor sign-in is on for the Railway, Supabase, GitHub, Anthropic, Deepgram and Resend accounts</Todo>.</li>
+            <li><strong>Changes:</strong> changes are tested automatically and tried on a separate preview version before they go live.</li>
+            <li><strong>Backups and recovery:</strong> <Todo>backup arrangements</Todo>.</li>
+          </ul>
         </div>
       </section>
       <SiteFooter />
