@@ -50,13 +50,24 @@ export async function readJson<T>(req: Request, schema: ZodType<T>, maxBytes = 6
  * CSRF defence for cookie-authenticated mutations: require same-origin Origin (or Sec-Fetch-Site)
  * in addition to SameSite=Lax cookies.
  */
+/** The origin the browser addressed, from the proxy's forwarded headers or the Host header. */
+export function requestOrigin(req: Request): string | null {
+  const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').split(',')[0]!.trim();
+  if (!host) return null;
+  const proto = (req.headers.get('x-forwarded-proto') ?? new URL(req.url).protocol.replace(':', '')).split(',')[0]!.trim();
+  return `${proto}://${host}`;
+}
+
 export function assertSameOrigin(req: Request) {
   if (req.method === 'GET' || req.method === 'HEAD') return;
   const base = new URL(getConfig().env.APP_BASE_URL);
   const origin = req.headers.get('origin');
   const site = req.headers.get('sec-fetch-site');
   if (origin) {
-    if (origin !== base.origin) throw new ApiError(403, 'bad_origin', 'Request origin not allowed.');
+    // Same-origin check: the configured address, or the address this request was actually sent to
+    // (as Next.js server actions check it). A cross-site page can't make a victim's browser send a
+    // matching Origin, so either is safe; the second avoids lock-outs when APP_BASE_URL is stale.
+    if (origin !== base.origin && origin !== requestOrigin(req)) throw new ApiError(403, 'bad_origin', 'Request origin not allowed.');
     return;
   }
   if (site && site !== 'same-origin') throw new ApiError(403, 'bad_origin', 'Request origin not allowed.');
