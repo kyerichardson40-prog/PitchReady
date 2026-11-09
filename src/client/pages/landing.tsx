@@ -1,14 +1,15 @@
 'use client';
 /**
- * Landing page. One orchestrated moment: a door opens and a short practice conversation plays out,
- * ending in the evidence-quoting feedback PitchReady gives. Each loop shows a different sales
- * setting (doorstep, phone, meeting). No inline styles (production CSP); all motion is CSS and
+ * Landing page. One orchestrated moment: a short practice conversation plays out next to an
+ * illustration of its setting (phone call, meeting, shop, doorstep), ending in the evidence-quoting
+ * feedback PitchReady gives. Each loop shows the next setting; the buttons above pick one. No inline styles (production CSP); all motion is CSS and
  * stops under prefers-reduced-motion (the first conversation is then shown still).
  */
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../app-context.tsx';
 import { Link, useNavigate } from '../router.tsx';
 import { CtaBand, SiteFooter } from './site.tsx';
+import { ChannelIcon, SceneArt, type ChannelIconKind } from './scene-art.tsx';
 
 function useRevealed<T extends Element>() {
   const ref = useRef<T | null>(null);
@@ -28,15 +29,7 @@ function useRevealed<T extends Element>() {
 
 const SCRIPTS = [
   {
-    setting: 'On the doorstep', who: 'Resident', number: '42',
-    rep1: "Hi, I'm Sam from the Neighbourhood Meal Project. Have you got a minute?",
-    them: 'I already give to charity, to be honest.',
-    rep2: "That's great. I'll be quick, and it's completely fine to say no.",
-    checks: [['Said who you are', "I'm Sam from the Neighbourhood Meal Project"], ["Made clear it's voluntary", 'completely fine to say no']],
-    skill: 'Listening', score: 4,
-  },
-  {
-    setting: 'On the phone', who: 'Customer', number: '07',
+    scene: 'phone', tab: 'Phone', setting: 'On the phone', who: 'Customer', number: '',
     rep1: "Hi, it's Sam from BrightLine about your account. Is now an okay time?",
     them: "I'm happy with what I've got, thanks.",
     rep2: "That's fair. Can I ask how you mostly use your internet at home?",
@@ -44,12 +37,28 @@ const SCRIPTS = [
     skill: 'Listening', score: 4,
   },
   {
-    setting: 'In a meeting', who: 'Prospect', number: '3B',
+    scene: 'meeting', tab: 'Meeting', setting: 'In a meeting', who: 'Prospect', number: '',
     rep1: 'Thanks for making the time. Shall I start by asking how you do your books today?',
     them: 'My accountant sorts all that out.',
     rep2: 'That makes sense. What takes up most of your time before you send things over?',
     checks: [['Asked how they work now', 'how you do your books today'], ['Acknowledged their set-up', 'That makes sense.']],
     skill: 'Listening', score: 5,
+  },
+  {
+    scene: 'store', tab: 'Shop floor', setting: 'In store', who: 'Customer', number: '',
+    rep1: 'Great choice on that laptop. Can I mention one optional extra before you pay?',
+    them: "Isn't that covered by my home insurance anyway?",
+    rep2: "It might be, so it's worth checking. The plan's completely optional.",
+    checks: [['Asked permission first', 'Can I mention one optional extra'], ["Made clear it's optional", 'completely optional']],
+    skill: 'Accuracy', score: 5,
+  },
+  {
+    scene: 'door', tab: 'Doorstep', setting: 'On the doorstep', who: 'Resident', number: '42',
+    rep1: "Hi, I'm Sam from the Neighbourhood Meal Project. Have you got a minute?",
+    them: 'I already give to charity, to be honest.',
+    rep2: "That's great. I'll be quick, and it's completely fine to say no.",
+    checks: [['Said who you are', "I'm Sam from the Neighbourhood Meal Project"], ["Made clear it's voluntary", 'completely fine to say no']],
+    skill: 'Listening', score: 4,
   },
 ] as const;
 
@@ -57,44 +66,40 @@ const LOOP_MS = 16_000;
 
 function PracticeScene() {
   const [i, setI] = useState(0);
+  const [auto, setAuto] = useState(true);
   useEffect(() => {
-    if (typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (!auto || typeof window === 'undefined' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const t = setInterval(() => setI((n) => (n + 1) % SCRIPTS.length), LOOP_MS);
     return () => clearInterval(t);
-  }, []);
+  }, [auto]);
   const s = SCRIPTS[i]!;
   return (
-    <figure className="lp-scene" aria-labelledby="lp-scene-caption" key={i}>
-      <div className="lp-house" aria-hidden="true">
-        <div className="lp-fanlight" />
-        <div className="lp-frame">
-          <div className="lp-hall" />
-          <div className="lp-door">
-            <span className="lp-door-number">{s.number}</span>
-            <span className="lp-panel lp-panel-a" />
-            <span className="lp-panel lp-panel-b" />
-            <span className="lp-knob" />
+    <div className="lp-scene-wrap">
+      <div className="lp-scene-tabs" role="group" aria-label="Show an example practice">
+        {SCRIPTS.map((x, n) => (
+          <button key={x.scene} type="button" className={`lp-tab${n === i ? ' is-active' : ''}${auto ? ' is-auto' : ''}`} aria-pressed={n === i}
+            onClick={() => { setI(n); setAuto(false); }}>{x.tab}</button>
+        ))}
+      </div>
+      <figure className={`lp-scene lp-scene-${s.scene}`} aria-labelledby="lp-scene-caption" key={i}>
+        <SceneArt kind={s.scene} number={s.number} />
+        <div className="lp-thread">
+          <p className="lp-bubble lp-rep lp-b1"><span className="lp-who">You</span>{s.rep1}</p>
+          <p className="lp-bubble lp-resident lp-b2"><span className="lp-who">{s.who}</span>{s.them}</p>
+          <p className="lp-bubble lp-rep lp-b3"><span className="lp-who">You</span>{s.rep2}</p>
+          <div className="lp-feedback lp-b4">
+            <p className="lp-feedback-title">Your feedback</p>
+            {s.checks.map(([label, quote]) => (
+              <p className="lp-check" key={label}><span className="lp-tick">✓</span><span>{label}<q>{quote}</q></span></p>
+            ))}
+            <p className="lp-score"><span>{s.skill}</span><span className="lp-dots" aria-label={`${s.score} out of 5`}>{[1, 2, 3, 4, 5].map((n) => <i key={n} className={n > s.score ? 'off' : undefined} />)}</span></p>
           </div>
         </div>
-        <div className="lp-step" />
-      </div>
-      <div className="lp-thread">
-        <p className="lp-setting">{s.setting}</p>
-        <p className="lp-bubble lp-rep lp-b1"><span className="lp-who">You</span>{s.rep1}</p>
-        <p className="lp-bubble lp-resident lp-b2"><span className="lp-who">{s.who}</span>{s.them}</p>
-        <p className="lp-bubble lp-rep lp-b3"><span className="lp-who">You</span>{s.rep2}</p>
-        <div className="lp-feedback lp-b4">
-          <p className="lp-feedback-title">Your feedback</p>
-          {s.checks.map(([label, quote]) => (
-            <p className="lp-check" key={label}><span className="lp-tick">✓</span><span>{label}<q>{quote}</q></span></p>
-          ))}
-          <p className="lp-score"><span>{s.skill}</span><span className="lp-dots" aria-label={`${s.score} out of 5`}>{[1, 2, 3, 4, 5].map((n) => <i key={n} className={n > s.score ? 'off' : undefined} />)}</span></p>
-        </div>
-      </div>
-      <figcaption id="lp-scene-caption" className="sr-only">
-        Example practice {s.setting.toLowerCase()}: the rep opens, the {s.who.toLowerCase()} raises an objection, the rep acknowledges it, and the feedback quotes the rep's own words.
-      </figcaption>
-    </figure>
+        <figcaption id="lp-scene-caption" className="sr-only">
+          Example practice {s.setting.toLowerCase()}: the rep opens, the {s.who.toLowerCase()} raises an objection, the rep acknowledges it, and the feedback quotes the rep's own words.
+        </figcaption>
+      </figure>
+    </div>
   );
 }
 
@@ -104,14 +109,14 @@ const STEPS = [
   { n: 3, paint: 'cobalt', title: 'See what you said', text: 'Feedback on five skills, each backed by a quote from your conversation, then a one-minute retry of the weakest moment.' },
 ];
 
-const CHANNELS = [
-  { name: 'Door-to-door', eg: 'Charities, energy, home services', paint: 'teal' },
-  { name: 'Phone and telesales', eg: 'Upgrades, renewals, appointment setting', paint: 'red' },
-  { name: 'Shop floor', eg: 'Add-ons, care plans, finance options', paint: 'cobalt' },
-  { name: 'Business meetings', eg: 'Software, services, partnerships', paint: 'mustard' },
-  { name: 'Field visits', eg: 'Solar, home improvement, surveys', paint: 'teal' },
-  { name: 'Events and street', eg: 'Gyms, memberships, sign-ups', paint: 'red' },
-  { name: 'Video calls', eg: 'Demos, consultations, follow-ups', paint: 'cobalt' },
+const CHANNELS: { name: string; eg: string; paint: string; icon: ChannelIconKind }[] = [
+  { name: 'Door-to-door', eg: 'Charities, energy, home services', paint: 'teal', icon: 'door' },
+  { name: 'Phone and telesales', eg: 'Upgrades, renewals, appointment setting', paint: 'red', icon: 'phone' },
+  { name: 'Shop floor', eg: 'Add-ons, care plans, finance options', paint: 'cobalt', icon: 'bag' },
+  { name: 'Business meetings', eg: 'Software, services, partnerships', paint: 'mustard', icon: 'briefcase' },
+  { name: 'Field visits', eg: 'Solar, home improvement, surveys', paint: 'teal', icon: 'pin' },
+  { name: 'Events and street', eg: 'Gyms, memberships, sign-ups', paint: 'red', icon: 'stand' },
+  { name: 'Video calls', eg: 'Demos, consultations, follow-ups', paint: 'cobalt', icon: 'video' },
 ];
 
 const FAQS = [
@@ -127,6 +132,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const { repo, ctx, refresh } = useApp();
   const [streetRef, streetShown] = useRevealed<HTMLOListElement>();
+  const [channelsRef, channelsShown] = useRevealed<HTMLUListElement>();
   const demo = repo.mode === 'demo';
   const user = ctx?.user;
   const home = user?.role === 'manager' ? '/manager' : '/practice';
@@ -164,9 +170,10 @@ export function HomePage() {
         <div className="lp-wrap">
           <h2 id="lp-channels-title" className="lp-h2">Built for every kind of sales conversation</h2>
           <p className="lp-section-lede">Pick where your team sells. The AI customer behaves like a real one in that setting, and feedback judges what good looks like there.</p>
-          <ul className="lp-channel-grid">
+          <ul ref={channelsRef} className={`lp-channel-grid${channelsShown ? ' is-shown' : ''}`}>
             {CHANNELS.map((c) => (
               <li key={c.name} className={`lp-channel lp-paint-${c.paint}`}>
+                <ChannelIcon kind={c.icon} />
                 <strong>{c.name}</strong>
                 <span>{c.eg}</span>
               </li>
