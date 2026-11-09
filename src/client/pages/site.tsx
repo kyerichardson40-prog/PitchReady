@@ -310,7 +310,6 @@ export function TermsPage() {
 
           <h2>1. Who we are</h2>
           <p>PitchReady is provided by Kye Richardson trading as PitchReady (“PitchReady”, “we”, “us” or “our”), a sole trader based in Kent, United Kingdom.</p>
-          <p>Business correspondence and service address: <Todo>full business or service address</Todo>.</p>
           <p>Email for support, complaints and legal notices: {email}.</p>
           <p>These terms apply to the business or organisation purchasing or agreeing to use PitchReady (the “customer”, “you” or “your”). An individual accepting an order on behalf of a customer must have authority to bind that customer.</p>
 
