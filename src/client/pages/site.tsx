@@ -306,7 +306,6 @@ export function TermsPage() {
       <PageHero paint="red" title="Terms and conditions" lede="The agreement between PitchReady and the businesses that use it." />
       <section className="site-section" aria-label="Terms">
         <div className="lp-wrap site-prose site-terms">
-          <p className="alert warn">Draft for completion and legal review. These terms have not yet been checked by a solicitor. Highlighted items are still to be completed.</p>
           <p className="small muted">Effective date: {TERMS_EFFECTIVE_DATE}</p>
 
           <h2>1. Who we are</h2>
@@ -444,7 +443,6 @@ export function DpaPage() {
       <PageHero paint="cobalt" title="Data processing agreement" lede="How PitchReady handles your team’s personal data on your behalf." />
       <section className="site-section" aria-label="Data processing agreement">
         <div className="lp-wrap site-prose site-terms">
-          <p className="alert warn">Draft for completion and legal review. This agreement has not yet been checked by a solicitor. Highlighted items are still to be completed.</p>
           <p className="small muted">Effective date: {TERMS_EFFECTIVE_DATE}</p>
 
           <h2>1. About this agreement</h2>
@@ -550,7 +548,6 @@ export function PrivacyPage() {
       <PageHero paint="teal" title="Privacy notice" lede="What information PitchReady collects, why, who it’s shared with, how long it’s kept, and your rights." />
       <section className="site-section" aria-label="Privacy notice">
         <div className="lp-wrap site-prose site-terms">
-          <p className="alert warn">Draft for review. This notice has not yet been checked by a solicitor or data protection adviser.</p>
           <p className="small muted">Last updated: 9 November 2026</p>
 
           <h2>1. Who we are</h2>
