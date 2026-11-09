@@ -5,7 +5,7 @@
 
 create or replace function app_private.drill_opener(p_key text) returns text
 language sql immutable set search_path = '' as $$
-  -- Must match lib/content/scenarios.ts DRILLS (checked by tests/unit/drills.test.ts).
+  -- Must match lib/content/scenarios.ts DRILLS (checked by tests/unit/templates.test.ts).
   select case p_key
     when 'already-donate' then 'I already have something like this, to be honest.'
     when 'busy' then 'I''m in a real rush, sorry.'
