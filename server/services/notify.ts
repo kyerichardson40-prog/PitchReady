@@ -52,6 +52,19 @@ export function contactEmail(f: ContactFields): { subject: string; text: string 
   return { subject, text };
 }
 
+/** Trims spaces and stray quotes pasted around a setting's value. */
+function clean(v: string | undefined): string {
+  return (v ?? '').trim().replace(/^["']+|["']+$/g, '').trim();
+}
+
+/** Resend's own explanation of a refusal (it names the cause, never the API key). */
+async function resendReason(res: Response): Promise<string> {
+  try {
+    const j = (await res.json()) as { name?: string; message?: string };
+    return oneLine([j.name, j.message].filter(Boolean).join(': '), 300);
+  } catch { return ''; }
+}
+
 export type NotifyResult = 'sent' | 'skipped' | 'failed';
 
 export async function notifyContact(
@@ -59,10 +72,10 @@ export async function notifyContact(
   opts: { env?: NodeJS.ProcessEnv; fetchImpl?: typeof fetch; timeoutMs?: number } = {},
 ): Promise<NotifyResult> {
   const env = opts.env ?? process.env;
-  const key = env.RESEND_API_KEY?.trim();
-  const to = env.CONTACT_NOTIFY_EMAIL?.trim();
+  const key = clean(env.RESEND_API_KEY);
+  const to = clean(env.CONTACT_NOTIFY_EMAIL);
   if (!key || !to) return 'skipped';
-  const from = env.CONTACT_FROM_EMAIL?.trim() || DEFAULT_FROM;
+  const from = clean(env.CONTACT_FROM_EMAIL) || DEFAULT_FROM;
   const { subject, text } = contactEmail(f);
   const doFetch = opts.fetchImpl ?? fetch;
   try {
@@ -73,8 +86,9 @@ export async function notifyContact(
       signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
     });
     if (!res.ok) {
-      // Log the status only: never the key, and never the visitor's details.
-      console.error(`[contact] notification email failed: HTTP ${res.status}`);
+      // Log the status and Resend's reason: never the key, and never the visitor's details.
+      const reason = await resendReason(res);
+      console.error(`[contact] notification email failed: HTTP ${res.status}${reason ? ` (${reason})` : ''}`);
       return 'failed';
     }
     return 'sent';

@@ -31,7 +31,7 @@ test('notify: skipped quietly when not configured', async () => {
 test('notify: posts to Resend with reply-to set to the sender', async () => {
   let seen: { url: string; init: RequestInit } | undefined;
   const fetchImpl = (async (url: string, init: RequestInit) => { seen = { url, init }; return new Response('{"id":"1"}', { status: 200 }); }) as unknown as typeof fetch;
-  const r = await notifyContact(fields, { env: { RESEND_API_KEY: 're_test', CONTACT_NOTIFY_EMAIL: 'owner@example.org' }, fetchImpl });
+  const r = await notifyContact(fields, { env: { RESEND_API_KEY: ' "re_test" ', CONTACT_NOTIFY_EMAIL: '"owner@example.org"' }, fetchImpl });
   assert.equal(r, 'sent');
   assert.equal(seen!.url, 'https://api.resend.com/emails');
   assert.equal((seen!.init.headers as Record<string, string>).Authorization, 'Bearer re_test');
@@ -44,8 +44,13 @@ test('notify: posts to Resend with reply-to set to the sender', async () => {
 
 test('notify: a failed or thrown request reports failed and never throws', async () => {
   const env = { RESEND_API_KEY: 're_test', CONTACT_NOTIFY_EMAIL: 'owner@example.org' };
-  const orig = console.error; console.error = () => {};
+  const logged: string[] = [];
+  const orig = console.error; console.error = (m: string) => { logged.push(m); };
   try {
+    const refuse = (async () => new Response('{"name":"validation_error","message":"You can only send testing emails to your own email address."}', { status: 403 })) as typeof fetch;
+    assert.equal(await notifyContact(fields, { env, fetchImpl: refuse }), 'failed');
+    assert.match(logged[0]!, /HTTP 403 \(validation_error: You can only send testing emails/);
+    assert.ok(!logged[0]!.includes('re_test'));
     assert.equal(await notifyContact(fields, { env, fetchImpl: (async () => new Response('no', { status: 403 })) as typeof fetch }), 'failed');
     assert.equal(await notifyContact(fields, { env, fetchImpl: (async () => { throw new Error('down'); }) as typeof fetch }), 'failed');
   } finally { console.error = orig; }
