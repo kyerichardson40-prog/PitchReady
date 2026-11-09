@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SALES_CHANNELS } from './sales.ts';
 import { CONCERN_TYPES, DIMENSION_KEYS, DRILL_KEYS, SCENARIO_KEY_PATTERN } from './types.ts';
 import { LIMITS } from './limits.ts';
 
@@ -134,6 +135,12 @@ export const campaignPackSchema = z.object({
   sample_explanation: boundedText(600),
   sample_unknown_answer: boundedText(400),
   sample_disengagement: boundedText(400),
+  sales_context: z.object({
+    channel: z.enum(SALES_CHANNELS),
+    offer: boundedText(120),
+    customer_label: z.string().trim().min(2).max(30).regex(/^[A-Za-z][A-Za-z '-]*$/, 'Use a plain word such as customer or prospect'),
+    good_outcome: boundedText(160),
+  }).strict().optional(),
 }).strict();
 
 export const rubricDimensionsSchema = z.array(z.object({

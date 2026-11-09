@@ -1,4 +1,5 @@
 'use client';
+import { useCustomer } from '../customer.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDrill, getScenario } from '../../../lib/content/scenarios.ts';
 import { LIMITS, sessionLimits } from '../../../lib/domain/limits.ts';
@@ -13,6 +14,7 @@ import { MIC_STATE_TEXT, TurnRecorder, recordingSupported, type MicState } from 
 export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   const navigate = useNavigate();
   const { repo, ctx, refresh } = useApp();
+  const customer = useCustomer();
   const { search } = useLocation();
   const qs = new URLSearchParams(search);
   const drillKey = (qs.get('drill') || null) as DrillKey | null;
@@ -207,14 +209,14 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
         <div className="card">
           <h2>Objective</h2>
           <p>{drill ? drill.objective : scenario.goal}</p>
-          <p className="small muted">Resident: {drill ? 'a resident' : scenario.persona}. A good outcome can be a respectful ending — you don’t need a donation to score well.</p>
+          <p className="small muted">{customer.Label}: {drill ? `a ${customer.label}` : scenario.persona} · {customer.channel.short}. A good outcome can be a respectful ending — you don’t need to make the sale to score well.</p>
         </div>
         <div className="alert info">
           <p style={{ margin: 0 }}><strong>Before you start:</strong> this is a simulated practice conversation. Your agency’s managers can review saved practice transcripts and feedback. This app does not keep raw audio by default{repo.mode === 'demo' ? '; in demo mode nothing leaves this browser' : ''}.</p>
         </div>
         <div className="card">
           <h2>Time and turns</h2>
-          <p>Up to {limits.maxSeconds / 60 >= 1 ? `${limits.maxSeconds / 60} minutes` : `${limits.maxSeconds} seconds`} of wall-clock time — including thinking and listening — and up to {limits.maxRepTurns} replies. The clock starts when the resident’s first line is ready and can’t be reset by reloading.</p>
+          <p>Up to {limits.maxSeconds / 60 >= 1 ? `${limits.maxSeconds / 60} minutes` : `${limits.maxSeconds} seconds`} of wall-clock time — including thinking and listening — and up to {limits.maxRepTurns} replies. The clock starts when the {customer.label}’s first line is ready and can’t be reset by reloading.</p>
           <h3>Device check</h3>
           {sttEnabled ? (
             <p className="small">{recordingSupported() ? 'This browser can record audio. You will be asked for microphone permission when you tap “Enable microphone”.' : MIC_STATE_TEXT.unsupported}</p>
@@ -224,7 +226,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
           {repo.mode === 'demo' && typeof speechSynthesis !== 'undefined' && (
             <label className="row" style={{ fontWeight: 500 }}>
               <input type="checkbox" checked={deviceVoice} onChange={(e) => setDeviceVoice(e.target.checked)} style={{ width: 24, minHeight: 24 }} />
-              Read resident lines aloud with this device’s built-in voice
+              Read the {customer.label}’s lines aloud with this device’s built-in voice
             </label>
           )}
         </div>
@@ -239,7 +241,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
       <div className="spread">
         <div>
           <h1 style={{ marginBottom: 0 }}>{drill ? `Drill: ${drill.title}` : scenario.title}</h1>
-          <span className="small muted">{repTurns}/{limits.maxRepTurns} replies · simulated resident{repo.mode === 'demo' ? (ctx?.liveAi ? ' (Claude, live)' : ' (scripted demo)') : ''}</span>
+          <span className="small muted">{repTurns}/{limits.maxRepTurns} replies · simulated {customer.label}{repo.mode === 'demo' ? (ctx?.liveAi ? ' (Claude, live)' : ' (scripted demo)') : ''}</span>
         </div>
         <div aria-live="off" className={`timer ${remaining !== null && remaining <= 20 ? 'low' : ''}`} aria-label="Time remaining">
           {remaining === null ? '—' : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`}
@@ -270,7 +272,7 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
         <form onSubmit={(e) => { e.preventDefault(); void sendTyped(); }}>
           <label htmlFor="typed">{sttEnabled ? 'Or type your reply' : 'Your reply'}</label>
           <textarea id="typed" value={text} maxLength={LIMITS.typedTurnMaxChars} onChange={(e) => setText(e.target.value)} disabled={busy || mic === 'recording'}
-            placeholder="Type what you would say at the door…" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendTyped(); } }} />
+            placeholder="Type what you would say…" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendTyped(); } }} />
           <div className="spread" style={{ marginTop: '0.5rem' }}>
             <button type="button" className="btn danger" onClick={end} disabled={busy && !ending.current}>End practice</button>
             <button type="submit" className="btn primary" disabled={busy || !text.trim() || mic === 'recording'}>{busy ? 'Sending…' : 'Send reply'}</button>

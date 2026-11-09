@@ -7,7 +7,7 @@ import type { DimensionKey, RubricVersion } from '../domain/types.ts';
  */
 export const DEMO_RUBRIC: RubricVersion = {
   version: 'demo-1',
-  promptVersion: 'evaluator-v2',
+  promptVersion: 'evaluator-v3',
   approvedBy: 'Fictional demo content',
   approvedAt: '2026-11-06T00:00:00.000Z',
   dimensions: [
@@ -18,8 +18,8 @@ export const DEMO_RUBRIC: RubricVersion = {
         { score: 1, description: 'Purpose/identity misleading or obscured.' },
         { score: 2, description: 'Identity or purpose only partly stated, or hard to follow.' },
         { score: 3, description: 'States purpose and identity clearly.' },
-        { score: 4, description: 'Clear purpose and identity, with some fit to the resident’s context.' },
-        { score: 5, description: 'Clear concise introduction that fits the resident’s context and seeks appropriate permission.' },
+        { score: 4, description: 'Clear purpose and identity, with some fit to the customer’s context.' },
+        { score: 5, description: 'Clear concise introduction that fits the customer’s context and seeks appropriate permission.' },
       ],
     },
     {
@@ -35,9 +35,9 @@ export const DEMO_RUBRIC: RubricVersion = {
     },
     {
       key: 'listening', label: 'Listening',
-      improvementTip: 'Acknowledge what the resident just said before you answer, and keep the answer short and relevant.',
+      improvementTip: 'Acknowledge what the customer just said before you answer, and keep the answer short and relevant.',
       anchors: [
-        { score: 1, description: 'Ignores the resident’s actual question or boundary.' },
+        { score: 1, description: 'Ignores the customer’s actual question or boundary.' },
         { score: 2, description: 'Partly responds but drifts into an unrelated or overlong pitch.' },
         { score: 3, description: 'Responds to the question/objection.' },
         { score: 4, description: 'Responds relevantly and acknowledges the concern.' },
@@ -46,13 +46,13 @@ export const DEMO_RUBRIC: RubricVersion = {
     },
     {
       key: 'next_step', label: 'Next step',
-      improvementTip: 'Offer one clear, voluntary next step — or end the conversation when that is what the resident wants.',
+      improvementTip: 'Offer one clear, voluntary next step — or end the conversation when that is what the customer wants.',
       anchors: [
         { score: 1, description: 'Pressures or misstates commitment.' },
         { score: 2, description: 'Next step unclear, or voluntariness not made clear.' },
         { score: 3, description: 'Offers a clear voluntary next step, or ends when appropriate.' },
-        { score: 4, description: 'Clear voluntary next step that reflects the resident’s wishes.' },
-        { score: 5, description: 'Matches the next step to the resident’s wishes and confirms understanding where relevant.' },
+        { score: 4, description: 'Clear voluntary next step that reflects the customer’s wishes.' },
+        { score: 5, description: 'Matches the next step to the customer’s wishes and confirms understanding where relevant.' },
       ],
     },
     {

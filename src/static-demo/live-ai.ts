@@ -6,6 +6,7 @@
  * prompt, so the instructions lead the single user message and the data follows, labelled.
  * Only the standalone build imports this file. See DECISIONS.md D24.
  */
+import { salesContextOf, salesSettingForAi } from '../../lib/domain/sales.ts';
 import { EVALUATION_JSON_SCHEMA, RESIDENT_JSON_SCHEMA } from '../../lib/ai/json-schemas.ts';
 import { EVALUATOR_PROMPT_VERSION, EVALUATOR_SYSTEM_PROMPT, RESIDENT_SYSTEM_PROMPT, repairInstruction } from '../../lib/ai/prompts.ts';
 import { validateEvaluation, validationContext } from '../../lib/domain/evaluation-validator.ts';
@@ -39,10 +40,11 @@ export class ClaudeLiveAi implements LiveAiEngine {
 
   async residentReply(input: Parameters<LiveAiEngine['residentReply']>[0]) {
     const data = {
+      SALES_SETTING: salesSettingForAi(salesContextOf(input.campaign)),
       SCENARIO: input.scenario, DRILL: input.drill,
       APPROVED_CAMPAIGN: { name: input.campaign.name, organisation: input.campaign.organisation, fictional: input.campaign.fictional, approved_facts: input.campaign.approved_facts },
       TRANSCRIPT_UNTRUSTED: transcriptData(input.transcript.slice(-24)),
-      TASK: 'Reply as the resident to the latest rep turn.',
+      TASK: 'Reply as the customer to the latest rep turn.',
     };
     const raw = await this.ask([{ role: 'user', content: framed(RESIDENT_SYSTEM_PROMPT, RESIDENT_JSON_SCHEMA, data) }], 'quick') as Record<string, unknown> | null;
     // Keep only the schema's fields: a stray extra key should not discard an otherwise good reply.
@@ -54,6 +56,7 @@ export class ClaudeLiveAi implements LiveAiEngine {
   async evaluate(input: Parameters<LiveAiEngine['evaluate']>[0]) {
     const data = {
       RUBRIC_VERSION: input.rubric.version, RUBRIC: input.rubric.dimensions,
+      SALES_SETTING: salesSettingForAi(salesContextOf(input.campaign)),
       APPROVED_CAMPAIGN: {
         approved_facts: input.campaign.approved_facts, forbidden_claims: input.campaign.forbidden_claims, fictional: input.campaign.fictional,
         must_say: input.campaign.must_say ?? [], never_say: input.campaign.never_say ?? [], objection_answers: input.campaign.objection_answers ?? [],

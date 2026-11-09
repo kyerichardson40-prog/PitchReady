@@ -5,10 +5,9 @@ import { getConfig, connectedReady } from '../../server/config.ts';
 import { DRILLS } from '../../lib/content/scenarios.ts';
 import { computeOverview } from '../../lib/domain/metrics.ts';
 
-test('SQL drill openers match lib/content (single source check)', () => {
+test('SQL drill scenario mapping matches lib/content (openers: tests/unit/templates.test.ts)', () => {
   const sql = readFileSync('supabase/migrations/20261106000300_api.sql', 'utf8');
   for (const d of DRILLS) {
-    assert.ok(sql.includes(`when '${d.key}' then '${d.opener.replace(/'/g, "''")}'`), `opener for ${d.key}`);
     assert.ok(sql.includes(`when '${d.key}' then '${d.baseScenario}'`) || sql.includes(`'${d.key}' then '${d.baseScenario}'`), `scenario for ${d.key}`);
   }
 });

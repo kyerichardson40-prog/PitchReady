@@ -49,16 +49,16 @@ export const SCENARIOS: Scenario[] = [
 ];
 
 export const DRILLS: Drill[] = [
-  { key: 'already-donate', title: 'Already donates', baseScenario: 'existing-donor', opener: 'I already give to a couple of charities, to be honest.', objective: 'Acknowledge their existing giving in one or two sentences without arguing.' },
-  { key: 'busy', title: 'Busy', baseScenario: 'busy', opener: "I'm in a real rush, sorry.", objective: 'Respect the time limit: offer a ten-second version or a courteous ending.' },
-  { key: 'not-interested', title: 'Not interested', baseScenario: 'firm-refusal', opener: "I'm not interested, thanks.", objective: 'Accept the answer and end courteously in one sentence.' },
-  { key: 'cannot-afford', title: "Can't afford it", baseScenario: 'existing-donor', opener: "Money's tight at the moment, I can't afford anything extra.", objective: 'Acknowledge the situation and make clear declining is completely fine.' },
-  { key: 'prefers-one-off', title: 'Prefers one-off gifts', baseScenario: 'monthly-giving', opener: 'I only really do one-off donations.', objective: 'Explain accurately that this campaign invites an optional monthly gift, without pressure.' },
-  { key: 'legitimacy', title: 'Asks legitimacy', baseScenario: 'sceptical', opener: 'Have you got any ID or a registration number?', objective: 'Answer honestly; say you would need to check anything not in the approved pack.' },
-  { key: 'amount', title: 'Asks the amount', baseScenario: 'monthly-giving', opener: 'How much are you actually asking for?', objective: 'State the optional £10 monthly gift clearly and that declining is fine.' },
-  { key: 'money-use', title: 'Asks how money is used', baseScenario: 'sceptical', opener: 'Where does the money actually go?', objective: 'Use only approved facts; say you need to check impact figures rather than guess.' },
-  { key: 'cancellation', title: 'Asks about cancelling', baseScenario: 'monthly-giving', opener: 'And how would I cancel if I changed my mind?', objective: 'Say honestly that you would need to check the approved cancellation information.' },
-  { key: 'asks-to-end', title: 'Asks to end', baseScenario: 'firm-refusal', opener: "I'd like you to go now, please.", objective: 'Disengage promptly and courteously in one sentence.' },
+  { key: 'already-donate', title: "Already has one", baseScenario: 'existing-donor', opener: "I already have something like this, to be honest.", objective: "Acknowledge what they already have in one or two sentences, without arguing or criticising it." },
+  { key: 'busy', title: "Busy", baseScenario: 'busy', opener: "I'm in a real rush, sorry.", objective: "Respect the time limit: offer a ten-second version or a courteous ending." },
+  { key: 'not-interested', title: "Not interested", baseScenario: 'firm-refusal', opener: "I'm not interested, thanks.", objective: "Accept the answer and end courteously in one sentence." },
+  { key: 'cannot-afford', title: "Can't afford it", baseScenario: 'existing-donor', opener: "Money's tight at the moment, I can't take on anything extra.", objective: "Acknowledge the situation and make clear that saying no is completely fine." },
+  { key: 'prefers-one-off', title: "Wary of commitment", baseScenario: 'monthly-giving', opener: "I'd rather not sign up to anything ongoing.", objective: "Explain the commitment accurately from the approved facts, without pressure." },
+  { key: 'legitimacy', title: "Asks if it's legitimate", baseScenario: 'sceptical', opener: "How do I know you're legitimate?", objective: "Answer honestly; say you would need to check anything that isn't in the approved information." },
+  { key: 'amount', title: "Asks the price", baseScenario: 'monthly-giving', opener: "How much is this actually going to cost me?", objective: "State the price or amount clearly from the approved facts; if it isn't there, say you need to check." },
+  { key: 'money-use', title: "Asks what they'd get", baseScenario: 'sceptical', opener: "What exactly would I be getting for that?", objective: "Use only approved facts; say you need to check anything else rather than guess." },
+  { key: 'cancellation', title: "Asks about cancelling", baseScenario: 'monthly-giving', opener: "And how would I cancel if I changed my mind?", objective: "Say honestly that you would need to check the approved cancellation information." },
+  { key: 'asks-to-end', title: "Asks to end", baseScenario: 'firm-refusal', opener: "I'd like to end this here, please.", objective: "End promptly and courteously in one sentence." },
 ];
 
 export function getScenario(key: string): Scenario | undefined {

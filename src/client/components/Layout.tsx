@@ -3,6 +3,9 @@ import { useApp } from '../app-context.tsx';
 import { Link, useNavigate, useLocation } from '../router.tsx';
 import { auth } from '../repo/api-repo.ts';
 
+/** Public marketing pages: full-width, with their own footer. */
+const SITE_PAGES = new Set(['/', '/how-it-works', '/about', '/contact', '/terms']);
+
 export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { ctx, repo, refresh } = useApp();
@@ -12,7 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
     ? [['/manager', 'Overview'], ['/manager/reps', 'Team'], ['/manager/scenarios', 'Scenarios'], ['/manager/campaign', 'Rules & campaign'], ['/settings', 'Settings']]
     : role === 'rep'
       ? [['/practice', 'Practise'], ['/history', 'History'], ['/settings', 'Settings']]
-      : [];
+      : [['/how-it-works', 'How it works'], ['/about', 'About'], ['/contact', 'Contact']];
   const isCurrent = (href: string) => pathname === href || (href !== '/manager' && pathname.startsWith(href + '/')) || (href === '/practice' && pathname.startsWith('/sessions/'));
 
   return (
@@ -25,7 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <span>
               Synthetic, fictional data stored only in this browser.{' '}
               {ctx.liveAi
-                ? 'Live AI is on: the resident and feedback come from Claude, using your claude.ai account.'
+                ? 'Live AI is on: the AI customer and the feedback come from Claude, using your claude.ai account.'
                 : 'Feedback is rule-based “Demo feedback”, not AI.'}
             </span>
             {!repo.liveAi && repo.liveAiNote && <span className="small">{repo.liveAiNote}</span>}
@@ -42,9 +45,9 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="topbar">
         <div className="topbar-inner">
           <Link to={role === 'manager' ? '/manager' : role ? '/practice' : '/'} className="brand">PitchReady<small>{repo.mode === 'demo' ? 'demo' : 'pilot'}</small></Link>
+          {!ctx?.user && pathname !== '/login' && <Link to="/login" className="btn primary header-signin">Sign in</Link>}
           <nav className="nav" aria-label="Main">
             {links.map(([href, label]) => <Link key={href} to={href} current={isCurrent(href)}>{label}</Link>)}
-            {!ctx?.user && pathname !== '/login' && <Link to="/login" className="btn primary header-signin">Sign in</Link>}
             {repo.mode === 'connected' && ctx?.user && (
               <button className="btn link" onClick={async () => { await auth.signOut().catch(() => {}); await refresh(); navigate('/login?signedOut=1'); }}>Sign out</button>
             )}
@@ -54,7 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main id="main" tabIndex={-1} className={pathname === '/' ? 'main-wide' : undefined}>{children}</main>
+      <main id="main" tabIndex={-1} className={SITE_PAGES.has(pathname) ? 'main-wide' : undefined}>{children}</main>
     </>
   );
 }

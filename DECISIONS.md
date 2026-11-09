@@ -77,3 +77,9 @@ The hosted pilot is one Railway service. Rather than a second cron service or an
 
 ## D29 — Visual identity
 Painted front doors of a British street: teal, postbox red, cobalt and mustard on a cool pavement grey, navy ink, brass door numbers, and Bricolage Grotesque (OFL, self-hosted in `public/fonts`, embedded in the standalone demo) for headings. The landing page has one looping doorstep animation; scenarios are numbered doors; feedback reuses the landing page's outlined card. All motion is CSS and stops under `prefers-reduced-motion`; no inline style attributes are server-rendered (production CSP). Manager tables turn into stacked cards below 760px.
+
+## D30 — Any kind of sales
+The campaign pack gains an optional `sales_context` (channel, what is offered, what the other person is called, what a good outcome is); packs without one are treated as door-to-door fundraising. The AI customer and the evaluator receive it as `SALES_SETTING` data (prompts `resident-v2`, `evaluator-v3`), so behaviour and judgement fit the channel. Six fictional templates (`lib/content/templates.ts`: door-to-door, phone, retail, B2B, field visits, events) load into the campaign editor and can add five scenarios each. Retry drills are worded for any setting and, in migration 000700, a drill keeps the scenario of the session it retries. **Migration 000700 changes live behaviour (drill wording) and must be applied when this version goes live, not before.**
+
+## D31 — Public site and contact form
+Public pages: home, how it works, about, contact, terms (draft, not legally reviewed), with a shared footer. The contact form posts to `/api/contact` (same-origin, 3/min per IP, hidden honeypot field) which stores messages in `public.contact_messages` (migration 000600) through a service-only function with an hourly global cap. Nothing is emailed; the owner reads messages in the Supabase Table Editor. No client role can read the table.

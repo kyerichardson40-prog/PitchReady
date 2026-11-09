@@ -3,6 +3,7 @@
  * API. Same pages, shell, demo repository and "Demo feedback" rules as `npm run dev`.
  * See DECISIONS.md D23.
  */
+import { AboutPage, ContactPage, HowItWorksPage, TermsPage } from '../client/pages/site.tsx';
 import { createRoot } from 'react-dom/client';
 import type { ReactNode } from 'react';
 import { usePathname, useSearchParams } from './next-navigation.ts';
@@ -22,6 +23,10 @@ try { window.confirm = () => true; } catch { /* ignore */ }
 const routes: [RegExp, (m: string[], search: string) => ReactNode][] = [
   [/^\/$/, () => <HomePage />],
   [/^\/login$/, () => <LoginPage />],
+  [/^\/how-it-works$/, () => <HowItWorksPage />],
+  [/^\/about$/, () => <AboutPage />],
+  [/^\/contact$/, () => <ContactPage />],
+  [/^\/terms$/, () => <TermsPage />],
   [/^\/invite\/([^/]+)$/, (m) => <InvitePage token={m[1]!} />],
   [/^\/practice$/, () => <PracticePage />],
   [/^\/practice\/([^/]+)$/, (m, s) => <PracticeSessionPage key={m[1]! + s} scenarioId={m[1]!} />],

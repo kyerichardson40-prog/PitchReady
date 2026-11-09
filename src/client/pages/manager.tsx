@@ -1,4 +1,6 @@
 'use client';
+import { CHANNEL_INFO, SALES_CHANNELS, salesContextOf, type SalesChannel, type SalesContext } from '../../../lib/domain/sales.ts';
+import { SALES_TEMPLATES, getTemplate, type SalesTemplate } from '../../../lib/content/templates.ts';
 import { useEffect, useState } from 'react';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 import { MIN_SAMPLE } from '../../../lib/domain/metrics.ts';
@@ -252,11 +254,26 @@ export function ManagerCampaignPage() {
       {q.data.draft && <div className="alert warn">You have an unpublished draft (saved {fmtDate(q.data.draft.updatedAt)}).</div>}
       {msg && <div className="alert info" role="status">{msg}</div>}
       {errs.length > 0 && <div className="alert error" role="alert"><strong>Fix before saving:</strong><ul className="small">{errs.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
+      <TemplatePicker onLoad={async (t, withScenarios) => {
+        setPack({ ...structuredClone(t.pack), campaign_key: pack.campaign_key, version: pack.version } as CampaignPack);
+        setErrs([]);
+        let added = 0;
+        if (withScenarios) {
+          try {
+            const have = new Set((await repo.getScenarioAdmin()).scenarios.map((x) => x.title.trim().toLowerCase()));
+            for (const sc of t.scenarios) if (!have.has(sc.title.trim().toLowerCase())) { await repo.saveScenario({ key: null, ...sc }); added++; }
+          } catch (e: any) { setErrs([`Scenarios: ${e.message}`]); }
+        }
+        setMsg(`Loaded the “${t.label}” template into this page${withScenarios ? ` and added ${added} practice scenario${added === 1 ? '' : 's'}` : ''}. Edit it to match your real offer, then save and publish.`);
+        window.scrollTo(0, 0);
+      }} />
       <div className="card">
         <div className="row">{pack.fictional && <FictionalTag />}</div>
         <div className="field"><label htmlFor="c-name">Campaign name</label><input id="c-name" value={pack.name} onChange={(e) => set({ name: e.target.value })} /></div>
-        <div className="field"><label htmlFor="c-org">Organisation</label><input id="c-org" value={pack.organisation} onChange={(e) => set({ organisation: e.target.value })} /></div>
+        <div className="field"><label htmlFor="c-org">Organisation or brand</label><input id="c-org" value={pack.organisation} onChange={(e) => set({ organisation: e.target.value })} /></div>
       </div>
+
+      <SalesSettingEditor value={salesContextOf(pack)} onChange={(sales_context) => set({ sales_context })} />
 
       <section className="card rules-section rules-must" aria-labelledby="rules-must">
         <h2 id="rules-must">What reps must say</h2>
@@ -313,7 +330,7 @@ export function ManagerCampaignPage() {
         {pack.objection_answers.map((o, i) => (
           <div key={i} className="rule-row field">
             <div className="grow stack">
-              <input aria-label={`Objection ${i + 1}`} value={o.objection} placeholder="e.g. I already give to charity." onChange={(e) => set({ objection_answers: pack.objection_answers.map((x, j) => (j === i ? { ...x, objection: e.target.value } : x)) })} />
+              <input aria-label={`Objection ${i + 1}`} value={o.objection} placeholder="e.g. I'm happy with what I've got." onChange={(e) => set({ objection_answers: pack.objection_answers.map((x, j) => (j === i ? { ...x, objection: e.target.value } : x)) })} />
               <textarea aria-label={`Approved answer ${i + 1}`} value={o.answer} placeholder="Your approved answer" onChange={(e) => set({ objection_answers: pack.objection_answers.map((x, j) => (j === i ? { ...x, answer: e.target.value } : x)) })} />
             </div>
             <button className="btn danger" aria-label={`Remove objection ${i + 1}`} onClick={() => set({ objection_answers: pack.objection_answers.filter((_, j) => j !== i) })}>Remove</button>
@@ -373,4 +390,55 @@ function ListInput({ value, onChange, multiline, separator = '\n', label, id, pl
   useEffect(() => { if (JSON.stringify(parse(raw)) !== JSON.stringify(value)) setRaw(value.join(join)); }, [value.join('\u0000')]); // eslint-disable-line react-hooks/exhaustive-deps
   const props = { id, 'aria-label': label, placeholder, value: raw, onChange: (e: { target: { value: string } }) => { setRaw(e.target.value); onChange(parse(e.target.value)); } };
   return multiline ? <textarea {...props} /> : <input {...props} />;
+}
+
+function TemplatePicker({ onLoad }: { onLoad: (t: SalesTemplate, withScenarios: boolean) => Promise<void> }) {
+  const [id, setId] = useState(SALES_TEMPLATES[1]!.id);
+  const [withScenarios, setWithScenarios] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const t = getTemplate(id)!;
+  return (
+    <details className="card template-card">
+      <summary>Start from a template</summary>
+      <p className="small muted">Ready-made, fictional examples for different kinds of sales. Loading one replaces the fields below (nothing is saved until you choose Save draft).</p>
+      <div className="field">
+        <label htmlFor="tpl">Kind of sales</label>
+        <select id="tpl" value={id} onChange={(e) => setId(e.target.value)}>
+          {SALES_TEMPLATES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+        </select>
+        <p className="small muted m0">{t.blurb} Example: {t.pack.organisation}.</p>
+      </div>
+      <label className="row"><input type="checkbox" checked={withScenarios} onChange={(e) => setWithScenarios(e.target.checked)} /> Also add its five practice scenarios (added straight away; you can edit or archive them)</label>
+      <div className="row mt-sm">
+        <button className="btn primary" disabled={busy} onClick={async () => {
+          if (!confirm(`Replace the fields on this page with the “${t.label}” template?`)) return;
+          setBusy(true); try { await onLoad(t, withScenarios); } finally { setBusy(false); }
+        }}>{busy ? 'Loading…' : 'Load template'}</button>
+      </div>
+    </details>
+  );
+}
+
+function SalesSettingEditor({ value, onChange }: { value: SalesContext; onChange: (v: SalesContext) => void }) {
+  const set = (patch: Partial<SalesContext>) => onChange({ ...value, ...patch });
+  return (
+    <section className="card rules-section rules-setting" aria-labelledby="rules-setting">
+      <h2 id="rules-setting">Sales setting</h2>
+      <p className="small muted">Where your team sells and what. The AI plays the other person to match, and feedback judges good practice for this setting.</p>
+      <div className="grid two">
+        <div className="field"><label htmlFor="s-channel">Where conversations happen</label>
+          <select id="s-channel" value={value.channel} onChange={(e) => set({ channel: e.target.value as SalesChannel })}>
+            {SALES_CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_INFO[c].label}</option>)}
+          </select></div>
+        <div className="field"><label htmlFor="s-label">What reps call the other person</label>
+          <input id="s-label" value={value.customer_label} placeholder="customer" onChange={(e) => set({ customer_label: e.target.value })} />
+          <p className="small muted m0">One plain word, e.g. customer, prospect, resident, client.</p></div>
+      </div>
+      <div className="field"><label htmlFor="s-offer">What reps offer</label>
+        <input id="s-offer" value={value.offer} placeholder="e.g. a full-fibre broadband upgrade" onChange={(e) => set({ offer: e.target.value })} /></div>
+      <div className="field"><label htmlFor="s-outcome">What a good outcome looks like</label>
+        <input id="s-outcome" value={value.good_outcome} placeholder="e.g. a booked appointment, or a clear no" onChange={(e) => set({ good_outcome: e.target.value })} />
+        <p className="small muted m0">Feedback never requires a sale: a respectful “no” can score well.</p></div>
+    </section>
+  );
 }

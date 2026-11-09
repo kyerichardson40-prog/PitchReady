@@ -1,3 +1,4 @@
+import type { SalesContext } from '../../../lib/domain/sales.ts';
 import type { CampaignPack, MustSay, ObjectionAnswer, Drill, DrillKey, EvaluationResult, FeedbackReport, ManagerReview, PracticeSession, RubricVersion, Scenario, ScenarioKey } from '../../../lib/domain/types.ts';
 import type { TranscriptTurn } from '../../../lib/domain/transcript.ts';
 import type { ManagerOverview, RepDirectoryRow, RepProfile } from '../../../lib/domain/metrics.ts';
@@ -11,6 +12,7 @@ export interface AppContextData {
     version: number; name: string; fictional: boolean; organisation: string; facts: { id: string; text: string }[];
     /** The agency's say rules (published version). */
     mustSay: MustSay[]; neverSay: string[]; forbiddenClaims: string[]; objectionAnswers: ObjectionAnswer[];
+    salesContext: SalesContext;
   } | null;
   rubricVersion: string | null;
   scenarios: Scenario[];
@@ -50,6 +52,7 @@ export interface ScenarioAdmin {
   /** Assigned scenario keys per rep (user id). Reps without an entry see every active scenario. */
   assignments: Record<string, string[]>;
 }
+export interface ContactInput { name: string; email: string; company: string; team_size: string; sales_type: string; message: string; website: string }
 export interface ScenarioFields { title: string; persona: string; opener: string; objection: string; goal: string; allowedEnding: string; behaviour: string; skill: string }
 
 export interface Repository {
@@ -79,6 +82,8 @@ export interface Repository {
   getScenarioAdmin(): Promise<ScenarioAdmin>;
   /** No key = new scenario. Each save of an existing one is a new version. */
   saveScenario(input: ScenarioFields & { key?: string | null }): Promise<{ key: string; version: number }>;
+  /** Public contact form. The demo does not send anything. */
+  sendContact(input: ContactInput): Promise<void>;
   setScenarioArchived(key: string, archived: boolean): Promise<void>;
   setScenarioAssignments(userId: string, keys: string[]): Promise<void>;
   getRepProfile(userId: string): Promise<RepProfile>;

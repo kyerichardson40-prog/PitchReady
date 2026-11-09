@@ -43,7 +43,7 @@ async function practise(page: Page, scenarioTitle: RegExp, lines: string[]) {
 test('the demo starts on the role picker; protected pages send you back to it; deactivated reps cannot sign in', async () => {
   const { page, errors } = await fresh(375);
   await page.goto(server.url + '/practice');
-  await page.getByRole('heading', { name: 'Practise the doorstep before you knock.' }).waitFor();
+  await page.getByRole('heading', { name: 'Practise the pitch before the real one.' }).waitFor();
   await page.getByRole('link', { name: 'Try it as a rep' }).first().click();
   assert.equal(await page.getByRole('radio', { name: /Dev \(demo rep\)/ }).isDisabled(), true, 'deactivated rep cannot be chosen');
   await page.getByRole('radio', { name: /Priya/ }).check();
@@ -60,12 +60,12 @@ test('manager writes a scenario and assigns only it to a rep; the rep sees and p
   await page.getByRole('link', { name: 'Scenarios' }).click();
   await page.getByRole('button', { name: 'New scenario' }).click();
   await page.getByLabel('Title').fill('Worried about money');
-  await page.getByLabel('Resident', { exact: true }).fill('Jamie, worried about bills');
+  await page.getByLabel('Who they are', { exact: true }).fill('Jamie, worried about bills');
   await page.getByLabel('Opening line').fill("Money's really tight at the moment, sorry.");
   await page.getByLabel('Main objection').fill('Cost of living');
   await page.getByLabel('Rep’s goal').fill('Acknowledge the worry and end kindly without pressure.');
   await page.getByLabel('Good endings').fill('A kind, short goodbye.');
-  await page.getByLabel('How the resident behaves').fill('Polite, a little anxious; ends if pushed.');
+  await page.getByLabel('How they behave').fill('Polite, a little anxious; ends if pushed.');
   await page.getByLabel('Skill practised').fill('Empathy');
   await page.getByRole('button', { name: 'Create scenario' }).click();
   await page.getByText('Scenario created.').waitFor();

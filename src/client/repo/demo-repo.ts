@@ -1,3 +1,4 @@
+import { salesContextOf } from '../../../lib/domain/sales.ts';
 import * as E from '../../../lib/demo/engine.ts';
 import { getDrill } from '../../../lib/content/scenarios.ts';
 import { demoResidentReply } from '../../../lib/demo/resident.ts';
@@ -96,6 +97,7 @@ export class DemoRepository implements Repository {
         campaign: {
           version: pub.version, name: pub.pack.name, fictional: pub.pack.fictional, organisation: pub.pack.organisation, facts: pub.pack.approved_facts,
           mustSay: pub.pack.must_say ?? [], neverSay: pub.pack.never_say ?? [], forbiddenClaims: pub.pack.forbidden_claims, objectionAnswers: pub.pack.objection_answers ?? [],
+          salesContext: salesContextOf(pub.pack),
         },
         rubricVersion: pub.rubric.version,
         scenarios: me.role === 'rep' ? E.allowedScenarios(s, me.id) : s.scenarios.filter((x) => !x.archived),
@@ -200,6 +202,7 @@ export class DemoRepository implements Repository {
   }
   reportFeedback(id: string, input: Parameters<Repository['reportFeedback']>[1]) { return this.run((s) => { E.reportFeedback(s, id, input); }); }
   requestDeletion(input: { scope: 'my_transcripts' | 'my_account' }) { return this.run((s) => { E.requestDeletion(s, input.scope); }); }
+  async sendContact(): Promise<void> { throw new Error('The demo can’t send messages. Use the contact page on the live PitchReady site.'); }
 
   getOverview(periodDays: number) {
     return this.run((s) => ({ ...E.overview(s, periodDays), remainingSeconds: E.remainingSeconds(s), allowanceSeconds: s.usage.allowanceSeconds }));

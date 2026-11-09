@@ -21,7 +21,7 @@ const STATUS: Record<string, number> = {
   turn_in_progress: 409, session_closed: 409, session_active: 409, turn_limit: 409, deadline_passed: 409, allowance_exhausted: 402,
   no_usage_period: 402, no_published_campaign: 409, spend_budget_exceeded: 503, seat_limit: 409, no_draft: 409, retry_limit: 429,
   invitation_invalid: 404, invitation_revoked: 410, invitation_used: 410, invitation_expired: 410, invitation_wrong_email: 403,
-  email_unconfirmed: 403, other_agency: 409, lock_mismatch: 409, immutable_record: 409, manager_not_found: 400, already_member: 409,
+  email_unconfirmed: 403, other_agency: 409, lock_mismatch: 409, immutable_record: 409, manager_not_found: 400, already_member: 409, rate_limited: 429,
 };
 
 export function mapDbError(code: string | undefined, message: string | undefined, detail: string | undefined): ApiError {

@@ -38,6 +38,7 @@ export class ApiRepository implements Repository {
   retryEvaluation(id: string) { return post<any>(`/api/sessions/${encodeURIComponent(id)}/evaluate`, {}); }
   async reportFeedback(id: string, input: any) { await post(`/api/sessions/${encodeURIComponent(id)}/reports`, input); }
   async requestDeletion(input: any) { await post('/api/me/deletion-requests', input); }
+  async sendContact(input: any) { await post('/api/contact', input); }
   getOverview(periodDays: number) { return call<any>(`/api/manager/overview?days=${periodDays}`); }
   listTeamSessions() { return call<any>('/api/manager/sessions'); }
   getRoster() { return call<any>('/api/manager/roster'); }

@@ -43,6 +43,7 @@ export const FICTIONAL_CAMPAIGN: CampaignPack = {
   sample_opening: "Hi, I'm Sam, practising on behalf of the fictional Neighbourhood Meal Project. Have you got a moment for me to explain it?",
   sample_explanation: "In this fictional campaign we're inviting an optional £10 monthly gift to support community meal sessions. I can explain what information I have, and it's completely fine to decline.",
   sample_unknown_answer: "I don't have approved information on that, so I'd need to check rather than guess.",
+  sales_context: { channel: 'door-to-door', offer: 'an optional £10 monthly gift', customer_label: 'resident', good_outcome: 'a clear, voluntary decision either way' },
   sample_disengagement: "Of course. Thanks for your time; I'll leave you to it.",
 };
 

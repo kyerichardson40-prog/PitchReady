@@ -1,4 +1,5 @@
 'use client';
+import { CHANNEL_INFO } from '../../../lib/domain/sales.ts';
 import { useEffect, useState } from 'react';
 import { getDrill } from '../../../lib/content/scenarios.ts';
 import type { FeedbackReport } from '../../../lib/domain/types.ts';
@@ -29,7 +30,7 @@ export function PracticePage() {
         {remaining !== null && <span className="time-pill" aria-label="Team practice time remaining">Team time left <strong>{fmtMinutes(Math.max(0, remaining))}</strong></span>}
       </div>
       <div className="card rules-card">
-        <div className="row">{ctx.campaign.fictional && <FictionalTag />}<span className="tag">Version {ctx.campaign.version}</span></div>
+        <div className="row"><span className="tag teal">{CHANNEL_INFO[ctx.campaign.salesContext.channel].label}</span>{ctx.campaign.fictional && <FictionalTag />}<span className="tag">Version {ctx.campaign.version}</span></div>
         <h2 style={{ marginTop: '0.5rem' }}>{ctx.campaign.name}</h2>
         {ctx.campaign.mustSay.length > 0 && (
           <details><summary>What you must say</summary>

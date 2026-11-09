@@ -1,3 +1,4 @@
+import type { SalesContext } from './sales.ts';
 import type { SessionKind } from './limits.ts';
 
 export const DIMENSION_KEYS = ['introduction', 'accuracy', 'listening', 'next_step', 'respect'] as const;
@@ -63,6 +64,8 @@ export interface CampaignPack {
   sample_explanation: string;
   sample_unknown_answer: string;
   sample_disengagement: string;
+  /** Where and what the team sells. Missing on packs from before it existed (door-to-door fundraising). */
+  sales_context?: SalesContext;
 }
 
 export interface Scenario {

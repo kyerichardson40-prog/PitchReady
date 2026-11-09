@@ -91,7 +91,7 @@ test('demo: report error, history, settings reset, and rep cannot open manager p
   await page.goto(server.url + '/settings');
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Reset demo data' }).first().click();
-  await page.getByRole('heading', { name: 'Practise the doorstep before you knock.' }).waitFor();
+  await page.getByRole('heading', { name: 'Practise the pitch before the real one.' }).waitFor();
   assert.ok(page.url().endsWith('/'), 'reset signs out to the role picker');
   await page.context().close();
 });

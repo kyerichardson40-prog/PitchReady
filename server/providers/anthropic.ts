@@ -5,6 +5,7 @@
  * Model IDs come from ANTHROPIC_ROLEPLAY_MODEL / ANTHROPIC_EVALUATION_MODEL; none are hard-coded.
  * NOT verified against the live API in this build (no key available) — see TEST_REPORT.md.
  */
+import { salesContextOf, salesSettingForAi } from '../../lib/domain/sales.ts';
 import { EVALUATION_JSON_SCHEMA, RESIDENT_JSON_SCHEMA } from '../../lib/ai/json-schemas.ts';
 import { EVALUATOR_SYSTEM_PROMPT, RESIDENT_SYSTEM_PROMPT, repairInstruction } from '../../lib/ai/prompts.ts';
 import { residentResultSchema } from '../../lib/domain/schemas.ts';
@@ -49,10 +50,11 @@ export class AnthropicResident implements ResidentModel {
   constructor(apiKey: string, model: string, rateCard: RateCard | null) { this.apiKey = apiKey; this.model = model; this.rateCard = rateCard; }
   async reply(input: ResidentContext) {
     const data = {
+      SALES_SETTING: salesSettingForAi(salesContextOf(input.campaign)),
       SCENARIO: input.scenario, DRILL: input.drillKey,
       APPROVED_CAMPAIGN: { name: input.campaign.name, organisation: input.campaign.organisation, fictional: input.campaign.fictional, approved_facts: input.campaign.approved_facts },
       TRANSCRIPT_UNTRUSTED: transcriptData(input.transcript.slice(-24)),
-      TASK: 'Reply as the resident to the latest rep turn.',
+      TASK: 'Reply as the customer to the latest rep turn.',
     };
     const { parsed, usage } = await callClaude({ apiKey: this.apiKey, model: this.model, system: RESIDENT_SYSTEM_PROMPT, messages: [{ role: 'user', content: JSON.stringify(data) }], schema: RESIDENT_JSON_SCHEMA, maxTokens: 300, timeoutMs: 20_000, rateCard: this.rateCard });
     const r = residentResultSchema.safeParse(parsed);
@@ -68,6 +70,7 @@ export class AnthropicEvaluator implements Evaluator {
   async evaluate(input: EvaluationContext) {
     const data = {
       RUBRIC_VERSION: input.rubric.version, RUBRIC: input.rubric.dimensions,
+      SALES_SETTING: salesSettingForAi(salesContextOf(input.campaign)),
       APPROVED_CAMPAIGN: {
         approved_facts: input.campaign.approved_facts, forbidden_claims: input.campaign.forbidden_claims, fictional: input.campaign.fictional,
         must_say: input.campaign.must_say ?? [], never_say: input.campaign.never_say ?? [], objection_answers: input.campaign.objection_answers ?? [],

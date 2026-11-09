@@ -161,12 +161,12 @@ function AssignmentEditor({ userId, name, assigned, admin, onSave }: { userId: s
 const EMPTY: ScenarioFields = { title: '', persona: '', opener: '', objection: '', goal: '', allowedEnding: '', behaviour: '', skill: '' };
 const FIELDS: { k: keyof ScenarioFields; label: string; hint: string; long?: boolean }[] = [
   { k: 'title', label: 'Title', hint: 'What reps see in their list, e.g. “New to the street”.' },
-  { k: 'persona', label: 'Resident', hint: 'Who answers the door, e.g. “Morgan, just moved in”.' },
-  { k: 'opener', label: 'Opening line', hint: 'The first thing the resident says.', long: true },
+  { k: 'persona', label: 'Who they are', hint: 'A name and one detail, e.g. “Morgan, just moved in” or “Helen, café owner”.' },
+  { k: 'opener', label: 'Opening line', hint: 'The first thing they say.', long: true },
   { k: 'objection', label: 'Main objection', hint: 'e.g. “Wants to settle in first”.' },
   { k: 'goal', label: 'Rep’s goal', hint: 'What a good rep does in this scenario.', long: true },
-  { k: 'allowedEnding', label: 'Good endings', hint: 'Endings that count as success (a donation is never required).', long: true },
-  { k: 'behaviour', label: 'How the resident behaves', hint: 'Used by the AI resident, e.g. “Friendly but distracted; ends politely if pressured”.', long: true },
+  { k: 'allowedEnding', label: 'Good endings', hint: 'Endings that count as success (a sale is never required for good feedback).', long: true },
+  { k: 'behaviour', label: 'How they behave', hint: 'Used by the AI customer, e.g. “Friendly but distracted; ends politely if pressured”.', long: true },
   { k: 'skill', label: 'Skill practised', hint: 'e.g. “Rapport and brevity”.' },
 ];
 
@@ -235,7 +235,7 @@ export function ManagerScenariosPage() {
               <div className="door-card-body">
               <div className="spread"><strong className="door-card-title">{s.title}</strong><span className="row">{s.archived ? <span className="tag">Archived</span> : <span className="tag teal">Active</span>}<span className="tag">v{s.version}</span></span></div>
               <span className="door-card-quote">“{s.opener}”</span>
-              <p className="small m0">Resident: {s.persona} · Objection: {s.objection} · Skill: {s.skill}</p>
+              <p className="small m0">Who: {s.persona} · Objection: {s.objection} · Skill: {s.skill}</p>
               {!s.archived && <p className="small muted m0">Practised by: {whoHas(s.key)}</p>}
               <div className="row mt-sm">
                 {!s.archived && <button className="btn" aria-label={`Edit ${s.title}`} onClick={() => { setMsg(null); setErr(null); setEditing({ key: s.key, fields: { title: s.title, persona: s.persona, opener: s.opener, objection: s.objection, goal: s.goal, allowedEnding: s.allowedEnding, behaviour: s.behaviour, skill: s.skill } }); window.scrollTo(0, 0); }}>Edit</button>}
