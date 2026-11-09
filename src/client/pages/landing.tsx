@@ -287,14 +287,14 @@ export function HomePage() {
             </div>
             <div className="lp-plan">
               <h3>Team plan</h3>
-              <p className="lp-plan-price">Priced for your team</p>
+              <p className="lp-plan-price">Based on your team’s size</p>
               <ul>
                 <li>Practice minutes sized to your team, renewed every month</li>
                 <li>3, 5 or 10-minute sessions, by voice or typing</li>
                 <li>Manager overview, trends, email alerts and data download</li>
                 <li>Cancel any time; it stops at the end of the month you’ve paid for</li>
               </ul>
-              <Link to="/contact" className="lp-btn lp-btn-alt">Get a price</Link>
+              <div className="lp-ctas"><Link to="/pricing" className="lp-btn lp-btn-alt">See how pricing works</Link><Link to="/contact" className="lp-btn lp-btn-quiet">Get a price</Link></div>
             </div>
           </div>
         </div>

@@ -113,3 +113,6 @@ The customer now warms up or cools down based on what the rep actually does (lis
 **Reps.** Progress card (recent average vs the five before, streak, best session, skills, small chart; `lib/domain/progress.ts`), score column in history, hands-free talking (listens after the customer speaks, sends after ~1.4 s of quiet, never sends silence; `SilenceDetector`), "Skip to my reply". Hands-free is on by default and remembered per browser.
 **Managers.** Four-week trend on the overview (`computeTrend`).
 Migration 000900 is backwards compatible (new columns with defaults, new functions; `my_context` and `bootstrap_agency` keep their signatures).
+
+## D38 — Menu button and Pricing page (9 Nov 2026)
+Visitors (not signed in) see the site's pages behind a **Menu** button in the header (How it works, Pricing, About us, Contact us), next to Sign in, instead of a row of links. The panel closes on choosing a page, Escape (focus back to the button) or a tap outside. Signed-in reps and managers keep their app tabs. New `/pricing` page: plans are based on the size of the business (reps, practice minutes, kind of selling), three team sizes each with "Get a price" → contact page, what every plan includes, and the free pilot. No prices are shown. Pricing is also in the footer and sitemap.

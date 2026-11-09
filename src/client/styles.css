@@ -798,3 +798,27 @@ mark.todo { background: #fdf0c2; color: var(--ink, #14213D); padding: 0 0.25em; 
 .lp-plan-price { font-family: var(--display); font-size: 1.9rem; font-weight: 800; margin: 0; }
 .lp-plan ul { margin: 0.25rem 0 0.75rem; padding-left: 1.2rem; flex: 1; }
 .lp-plan li { margin: 0.3rem 0; }
+
+/* Visitor header: the site's pages sit behind a Menu button. */
+.site-menu { position: relative; order: 3; flex: none; }
+.site-menu-btn { min-height: 44px; display: inline-flex; align-items: center; gap: 0.55rem; padding: 0 1rem; border: 2px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.site-menu-btn:hover, .site-menu-btn[aria-expanded="true"] { border-color: var(--ink); }
+.site-menu-icon { display: inline-flex; flex-direction: column; gap: 3px; width: 16px; }
+.site-menu-icon span { display: block; height: 2px; border-radius: 2px; background: currentColor; transition: transform 0.15s ease, opacity 0.15s ease; }
+.site-menu-btn[aria-expanded="true"] .site-menu-icon span:nth-child(1) { transform: translateY(5px) rotate(45deg); }
+.site-menu-btn[aria-expanded="true"] .site-menu-icon span:nth-child(2) { opacity: 0; }
+.site-menu-btn[aria-expanded="true"] .site-menu-icon span:nth-child(3) { transform: translateY(-5px) rotate(-45deg); }
+.site-menu-panel { position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 50; min-width: 220px; display: flex; flex-direction: column; padding: 0.5rem;
+  background: #fff; border: 2px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--paint-mustard); }
+.site-menu-panel a { min-height: 48px; display: flex; align-items: center; padding: 0 0.9rem; border-radius: 10px; color: var(--ink); text-decoration: none; font-weight: 700; }
+.site-menu-panel a:hover { background: var(--pavement); }
+.site-menu-panel a[aria-current="page"] { background: var(--ink); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .site-menu-icon span { transition: none; } }
+@media (max-width: 640px) {
+  .topbar-inner > .site-menu { order: 1; }
+  .topbar-inner:has(> .site-menu) { flex-wrap: nowrap; gap: 0.5rem; }
+  .topbar-inner:has(> .site-menu) > .brand { flex: 1; min-width: 0; }
+  .topbar-inner:has(> .site-menu) .brand small { display: none; }
+}
+.price-includes { margin-top: 1.5rem; }

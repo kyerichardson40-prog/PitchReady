@@ -22,6 +22,7 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Site" className="site-footer-links">
           <Link to="/how-it-works">How it works</Link>
+          <Link to="/pricing">Pricing</Link>
           <Link to="/about">About us</Link>
           <Link to="/contact">Contact us</Link>
           <Link to="/terms">Terms and conditions</Link>
@@ -35,7 +36,16 @@ export function SiteFooter() {
   );
 }
 
-export function CtaBand({ title, demo, signedIn, extra, pilots }: { title: string; demo?: boolean; signedIn?: boolean; extra?: ReactNode; pilots?: boolean }) {
+export function CtaBand({ title, demo, signedIn, extra, pilots, contactFirst }: { title: string; demo?: boolean; signedIn?: boolean; extra?: ReactNode; pilots?: boolean; contactFirst?: boolean }) {
+  if (contactFirst) {
+    return (
+      <section className="lp-close" aria-label={title}>
+        <h2 className="lp-close-title">{title}</h2>
+        <div className="lp-ctas"><Link to="/contact" className="lp-btn lp-btn-main">Contact us for a price</Link></div>
+        <p className="lp-fine">Tell us roughly how many reps you have and what kind of selling they do. We usually reply within one working day.</p>
+      </section>
+    );
+  }
   return (
     <section className="lp-close" aria-label={title}>
       <h2 className="lp-close-title">{title}</h2>
@@ -287,6 +297,78 @@ export function ContactPage() {
           </aside>
         </div>
       </section>
+      <SiteFooter />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Pricing */
+const PRICE_FACTORS = [
+  { title: 'How many reps you have', text: 'A plan covers the people who practise. Managers are free, however many you have.' },
+  { title: 'How much they practise', text: 'Practice minutes for the whole team, renewed every month. Light use for a handful of reps costs far less than daily practice for a big team.' },
+  { title: 'What kind of selling you do', text: 'Quick doorstep or street conversations use fewer minutes than ten-minute business meetings. We size the plan to your sessions.' },
+] as const;
+
+const PRICE_SIZES = [
+  { name: 'Small teams', who: 'Up to 10 reps', text: 'A new campaign, a single site or a growing team.' },
+  { name: 'Growing teams', who: '11 to 50 reps', text: 'Several managers, regular new starters and more than one kind of conversation.' },
+  { name: 'Large and multi-site', who: '50+ reps', text: 'Several teams or locations, with volume pricing and help setting up.' },
+];
+
+export function PricingPage() {
+  const { ctx } = useApp();
+  const pilotOpen = !!ctx?.pilotsOpen && !ctx?.user;
+  return (
+    <div className="lp site">
+      <PageHero paint="mustard" title="Pricing" lede="Every sales team is different, so our plans are based on the size of your business. Tell us about your team and we’ll send you a simple monthly price." />
+
+      <section className="site-section" aria-labelledby="price-how">
+        <div className="lp-wrap">
+          <h2 id="price-how" className="lp-h2">What your price is based on</h2>
+          <ul className="site-skill-grid">
+            {PRICE_FACTORS.map((f, i) => (
+              <li key={f.title} className={`site-skill site-skill-${i}`}><h3>{f.title}</h3><p>{f.text}</p></li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="site-section site-section-alt" aria-labelledby="price-sizes">
+        <div className="lp-wrap">
+          <h2 id="price-sizes" className="lp-h2">Plans for every size of team</h2>
+          <div className="lp-plans">
+            {PRICE_SIZES.map((p) => (
+              <div key={p.name} className="lp-plan">
+                <h3>{p.name}</h3>
+                <p className="lp-plan-price">{p.who}</p>
+                <p className="m0">{p.text}</p>
+                <Link to="/contact" className="lp-btn lp-btn-alt">Get a price</Link>
+              </div>
+            ))}
+          </div>
+          <div className="site-does price-includes">
+          <h3>Every plan includes</h3>
+          <ul className="lp-list">
+            <li>Practice by voice or typing, with 3, 5 or 10-minute sessions</li>
+            <li>Your own rules, approved facts and practice scenarios</li>
+            <li>Feedback that quotes each rep’s own words</li>
+            <li>Manager overview, trends, email alerts and data download</li>
+            <li>Monthly billing. Cancel any time and it stops at the end of the month you’ve paid for.</li>
+          </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="site-section" aria-labelledby="price-pilot">
+        <div className="lp-wrap lp-narrow">
+          <h2 id="price-pilot" className="lp-h2">Not sure yet? Start with a free pilot</h2>
+          <p>Try PitchReady with up to 5 reps: 60 minutes of practice over 14 days, free. No card needed, and it never turns into a paid plan by itself.</p>
+          {pilotOpen && <Link to={`/login?signup=1&next=${encodeURIComponent('/start')}`} className="lp-btn lp-btn-main">Start a free pilot</Link>}
+        </div>
+      </section>
+
+      <CtaBand title="Tell us about your team and we’ll send you a price" demo={false} signedIn={false}
+        extra={null} contactFirst />
       <SiteFooter />
     </div>
   );
