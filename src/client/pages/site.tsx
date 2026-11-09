@@ -396,6 +396,7 @@ export function PrivacyPage() {
             <li><strong>Supabase</strong>: database and sign-in (data stored in the EU, in Ireland).</li>
             <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback.</li>
             <li><strong>Deepgram</strong>: turning speech into text and reading the customer’s lines aloud.</li>
+            <li><strong>Resend</strong>: sending us an email when you use the contact form.</li>
           </ul>
           <p>Some of these providers are based in, or may process data in, the United States. Where personal data leaves the UK, we rely on the safeguards UK data protection law requires. We never sell personal data, and we don’t use it for advertising.</p>
 

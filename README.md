@@ -67,7 +67,8 @@ Connected mode = real Supabase Auth + Postgres with RLS, server-only providers, 
    - `PROVIDER_RATE_CARD_PATH` → copy `config/rate-card.example.json`, fill prices from the providers' current pricing pages (none are shipped). The server refuses to start live AI if a configured model has no price.
    - `AI_GLOBAL_BUDGET_MINOR_UNITS`, `AI_AGENCY_BUDGET_MINOR_UNITS`, `AI_BUDGET_CURRENCY` (must match the rate card).
    - `LIVE_AI_ENABLED=true`. Also set provider-side spend limits in the Anthropic and Deepgram consoles where available — local budgets are estimates.
-6. **Maintenance runs by itself.** The server runs it every 10 minutes (`instrumentation.ts` → `server/scheduler.ts`; `MAINTENANCE_INTERVAL_MINUTES`, `0` = off). It expires sessions, releases reservations, retries pending evaluations, honours deletion requests and applies retention. It can also be triggered: `POST /api/maintenance` with `Authorization: Bearer $MAINTENANCE_SECRET` (or `npm run maintenance`).
+6. **Contact form emails** (optional): set `RESEND_API_KEY` (from resend.com) and `CONTACT_NOTIFY_EMAIL` (your inbox) to get an email for each contact-form message; replying answers the sender. `CONTACT_FROM_EMAIL` defaults to Resend's test sender, which only delivers to the address the Resend account was made with — verify a domain in Resend to use another. Messages are always saved in `contact_messages` either way.
+7. **Maintenance runs by itself.** The server runs it every 10 minutes (`instrumentation.ts` → `server/scheduler.ts`; `MAINTENANCE_INTERVAL_MINUTES`, `0` = off). It expires sessions, releases reservations, retries pending evaluations, honours deletion requests and applies retention. It can also be triggered: `POST /api/maintenance` with `Authorization: Bearer $MAINTENANCE_SECRET` (or `npm run maintenance`).
 
 Local Supabase test data: `node scripts/seed-local.ts` (refuses non-local hosts; prints random one-time passwords).
 

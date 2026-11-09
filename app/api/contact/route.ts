@@ -2,11 +2,13 @@ import { z } from 'zod';
 import { open } from '../../../server/guard.ts';
 import { json, readJson } from '../../../server/http.ts';
 import { getDb } from '../../../server/db.ts';
+import { notifyContact } from '../../../server/services/notify.ts';
 
 /**
  * Public contact form. Same-origin only, 3 messages per minute per IP, a database-wide hourly cap,
  * and a hidden "website" field that people never fill in (bots usually do: those are dropped
- * silently). Messages are stored in public.contact_messages; nothing is emailed.
+ * silently). Messages are stored in public.contact_messages, then (if RESEND_API_KEY and
+ * CONTACT_NOTIFY_EMAIL are set) emailed to the owner. A failed email never fails the form.
  */
 const input = z.object({
   name: z.string().trim().min(1, 'Please add your name').max(120),
@@ -23,5 +25,6 @@ export const POST = open(async (req, { rid }) => {
   if (body.website) return json({ ok: true }, { requestId: rid });
   const { website: _w, ...fields } = body;
   await getDb().service().rpc('submit_contact', fields);
+  await notifyContact(fields);
   return json({ ok: true }, { requestId: rid });
 }, { rate: { name: 'contact', perMinute: 3 } });

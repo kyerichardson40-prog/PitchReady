@@ -83,3 +83,6 @@ The campaign pack gains an optional `sales_context` (channel, what is offered, w
 
 ## D31 — Public site and contact form
 Public pages: home, how it works, about, contact, terms (draft, not legally reviewed), with a shared footer. The contact form posts to `/api/contact` (same-origin, 3/min per IP, hidden honeypot field) which stores messages in `public.contact_messages` (migration 000600) through a service-only function with an hourly global cap. Nothing is emailed; the owner reads messages in the Supabase Table Editor. No client role can read the table. Enquiries are deleted after 12 months by the maintenance timer (`purge_contact_messages`), matching the privacy notice at `/privacy` (draft, not legally reviewed).
+
+## D32 — Contact form emails via Resend (9 Nov 2026)
+Each contact-form message is still saved in `contact_messages` first; then, if `RESEND_API_KEY` and `CONTACT_NOTIFY_EMAIL` are set, the server emails the owner through Resend's HTTP API (`server/services/notify.ts`, no SDK). Plain text only, subject flattened to one line, `reply_to` is the visitor so the owner can answer from their inbox. Best effort with an 8 s timeout: a failed email never fails the form, and only the HTTP status is logged. Resend was added to the privacy notice's provider list.
