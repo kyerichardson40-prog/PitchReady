@@ -34,3 +34,15 @@ exception when check_violation or not_null_violation then
 end $$;
 revoke all on function app_api.submit_contact(jsonb) from public, anon, authenticated, service_role;
 grant execute on function app_api.submit_contact(jsonb) to service_role;
+
+/** Retention for enquiries (privacy notice: 12 months). Called by the maintenance timer. */
+create or replace function app_api.purge_contact_messages(p jsonb default '{}'::jsonb) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  delete from public.contact_messages where created_at < now() - make_interval(months => coalesce((p ->> 'months')::int, 12));
+  get diagnostics n = row_count;
+  return jsonb_build_object('contact_messages_deleted', n);
+end $$;
+revoke all on function app_api.purge_contact_messages(jsonb) from public, anon, authenticated, service_role;
+grant execute on function app_api.purge_contact_messages(jsonb) to service_role;

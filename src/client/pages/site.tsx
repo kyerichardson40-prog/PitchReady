@@ -24,6 +24,7 @@ export function SiteFooter() {
           <Link to="/about">About us</Link>
           <Link to="/contact">Contact us</Link>
           <Link to="/terms">Terms and conditions</Link>
+          <Link to="/privacy">Privacy</Link>
           <Link to="/login">Sign in</Link>
         </nav>
       </div>
@@ -269,7 +270,7 @@ export function ContactPage() {
               </div>
               <div className="field"><label htmlFor="ct-msg">Message</label><textarea id="ct-msg" rows={6} value={f.message} onChange={set('message')} required maxLength={4000} /></div>
               <div className="hp-field" aria-hidden="true"><label htmlFor="ct-web">Leave this empty</label><input id="ct-web" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} /></div>
-              <p className="small muted m0">We only use your details to reply to you. See our <Link to="/terms">terms</Link>.</p>
+              <p className="small muted m0">We only use your details to reply to you. See our <Link to="/privacy">privacy notice</Link>.</p>
               <div className="row"><button className="btn primary big" type="submit" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send message'}</button></div>
             </form>
           )}
@@ -331,7 +332,7 @@ export function TermsPage() {
           <p>You keep ownership of the material you add, such as campaign information, rules, scenarios and practice conversations. You give us permission to store and process it only to provide, secure and improve the service for you. You are responsible for making sure your campaign information is accurate and that you are allowed to use it.</p>
 
           <h2>8. Personal data</h2>
-          <p>For users’ practice data, the customer decides how it is used and we process it on the customer’s behalf, under a data processing agreement available on request. Recordings are converted to text and not kept by us; transcripts and feedback are deleted after the customer’s retention period (30 days by default). We use trusted providers to run the service, including for hosting, the database, speech-to-text and AI. A privacy notice with more detail will be published on this site; until then, you can ask us about your data through the <Link to="/contact">contact page</Link>.</p>
+          <p>For users’ practice data, the customer decides how it is used and we process it on the customer’s behalf, under a data processing agreement available on request. Recordings are converted to text and not kept by us; transcripts and feedback are deleted after the customer’s retention period (30 days by default). We use trusted providers to run the service, including for hosting, the database, speech-to-text and AI. More detail is in our <Link to="/privacy">privacy notice</Link>.</p>
 
           <h2>9. Availability and changes</h2>
           <p>We aim to keep PitchReady available and working well, but we don’t promise it will always be uninterrupted or error-free. We may change or improve features. If a change significantly reduces what you’ve paid for, we’ll tell you in advance and you may end your plan.</p>
@@ -347,6 +348,78 @@ export function TermsPage() {
 
           <h2>13. Law</h2>
           <p>These terms are governed by the law of England and Wales, and the courts of England and Wales have jurisdiction.</p>
+        </div>
+      </section>
+      <SiteFooter />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Privacy */
+export function PrivacyPage() {
+  return (
+    <div className="lp site">
+      <PageHero paint="teal" title="Privacy notice" lede="What information PitchReady collects, why, who it’s shared with, how long it’s kept, and your rights." />
+      <section className="site-section" aria-label="Privacy notice">
+        <div className="lp-wrap site-prose site-terms">
+          <p className="alert warn">Draft for review. This notice has not yet been checked by a solicitor or data protection adviser.</p>
+          <p className="small muted">Last updated: 9 November 2026</p>
+
+          <h2>1. Who we are</h2>
+          <p>PitchReady is run by Kye Richardson trading as PitchReady (“we”, “us”), based in Kent, United Kingdom. You can contact us about anything in this notice through our <Link to="/contact">contact page</Link>.</p>
+
+          <h2>2. Our role</h2>
+          <ul>
+            <li><strong>Website visitors and enquiries:</strong> we decide how this information is used (we are the “controller”).</li>
+            <li><strong>Practice data in a team’s account</strong> (transcripts, feedback, scores and review notes): the business that invited you decides how it is used, and we process it on their behalf (we are their “processor”). Questions about it can go to your manager or to us.</li>
+            <li><strong>Account details</strong> (name, email, sign-in): we use these to run the service, and so does the business that invited you.</li>
+          </ul>
+
+          <h2>3. What we collect and why</h2>
+          <h3>If you contact us</h3>
+          <p>Your name, email address, and anything you choose to tell us: company, team size, kind of sales and your message. We use it only to reply and to talk with you about PitchReady. Our lawful basis is our legitimate interest in answering enquiries, or taking steps you ask for before an agreement.</p>
+          <h3>If you have an account</h3>
+          <ul>
+            <li><strong>Account:</strong> your name, email address, role (manager or rep) and team. Your password is stored by our sign-in provider in scrambled (hashed) form; we never see it.</li>
+            <li><strong>Practice:</strong> what you type, the text of what you say, the AI customer’s replies, feedback and scores, reports you send about feedback, and managers’ review notes and corrections.</li>
+            <li><strong>Voice:</strong> when you choose to speak, your recording is sent to our speech-to-text provider to turn it into text. PitchReady does not store the recording.</li>
+            <li><strong>Usage:</strong> practice minutes used and the cost of each AI request, kept as totals for billing and fair-use limits.</li>
+          </ul>
+          <p>We use this to provide the practice and feedback, let managers coach their team, keep the service secure, and manage plans and limits. Our lawful basis is that it is necessary to provide the service the business has asked for (and our legitimate interest in running it securely).</p>
+          <h3>Cookies and technical data</h3>
+          <p>We use two essential cookies to keep you signed in (for up to 7 and 30 days). We don’t use advertising or analytics cookies. Our servers briefly use your IP address to limit repeated attempts (for example, too many sign-ins), and our hosting provider may keep standard server logs for security.</p>
+
+          <h2>4. Who we share it with</h2>
+          <p>We use trusted providers to run PitchReady. They process data only to provide their service to us:</p>
+          <ul>
+            <li><strong>Railway</strong>: hosting the website and app.</li>
+            <li><strong>Supabase</strong>: database and sign-in (data stored in the EU, in Ireland).</li>
+            <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback.</li>
+            <li><strong>Deepgram</strong>: turning speech into text and reading the customer’s lines aloud.</li>
+          </ul>
+          <p>Some of these providers are based in, or may process data in, the United States. Where personal data leaves the UK, we rely on the safeguards UK data protection law requires. We never sell personal data, and we don’t use it for advertising.</p>
+
+          <h2>5. How long we keep it</h2>
+          <ul>
+            <li><strong>Enquiries:</strong> up to 12 months after we receive them, then deleted automatically, unless you become a customer.</li>
+            <li><strong>Transcripts, feedback and review notes:</strong> deleted after the team’s retention period, 30 days by default.</li>
+            <li><strong>Voice recordings:</strong> not kept by PitchReady.</li>
+            <li><strong>Accounts:</strong> while the account is active, then deleted on request or when the team’s agreement ends.</li>
+            <li><strong>Usage totals:</strong> kept for billing and accounting, without any practice text.</li>
+          </ul>
+
+          <h2>6. Keeping it safe</h2>
+          <p>Data is encrypted in transit. Each team’s data is kept separate at the database level, so one team can never see another’s. Access is limited to what each role needs: reps see their own practice, and managers see their own team.</p>
+
+          <h2>7. Your rights</h2>
+          <p>You can ask to see the personal data we hold about you, have it corrected or deleted, restrict or object to how we use it, or receive a copy to take elsewhere. Reps can also request deletion of their practice data in <strong>Settings</strong>. To use any of these rights, contact us through the <Link to="/contact">contact page</Link>. We’ll reply within one month. For practice data, we may involve the business that invited you, because they decide how it is used.</p>
+          <p>If you’re unhappy with how we’ve handled your data, you can complain to the Information Commissioner’s Office (ico.org.uk). We’d appreciate the chance to put it right first.</p>
+
+          <h2>8. Children</h2>
+          <p>PitchReady is a workplace training tool and is not intended for children.</p>
+
+          <h2>9. Changes</h2>
+          <p>We’ll update this notice when how we use data changes, and show the date of the latest version at the top.</p>
         </div>
       </section>
       <SiteFooter />

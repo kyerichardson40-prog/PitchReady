@@ -649,3 +649,4 @@ label:has(> input[type="checkbox"]) { display: flex; flex-wrap: nowrap; align-it
 @media (max-width: 819px) { .site-portrait { width: 160px; height: 200px; } .site-initials { font-size: 3.2rem; } }
 .site-portrait { overflow: hidden; }
 .site-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
+.site-terms h3 { font-size: 1.05rem; margin: 1.25rem 0 0.35rem; }

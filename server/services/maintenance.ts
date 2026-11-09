@@ -17,5 +17,8 @@ export async function runMaintenance(budgetMs = 50_000): Promise<MaintenanceResu
     if (r === 'none') break;
     evaluations[r] = (evaluations[r] ?? 0) + 1;
   }
-  return { ...(result ?? {}), evaluations };
+  // Enquiry retention (12 months). Skipped quietly until the contact_messages migration is applied.
+  let purged: Record<string, unknown> = {};
+  try { purged = (await getDb().service().rpc<any>('purge_contact_messages', {})) ?? {}; } catch { /* not installed yet */ }
+  return { ...(result ?? {}), ...purged, evaluations };
 }

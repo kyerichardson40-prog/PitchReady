@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from '../router.tsx';
 import { auth } from '../repo/api-repo.ts';
 
 /** Public marketing pages: full-width, with their own footer. */
-const SITE_PAGES = new Set(['/', '/how-it-works', '/about', '/contact', '/terms']);
+const SITE_PAGES = new Set(['/', '/how-it-works', '/about', '/contact', '/terms', '/privacy']);
 
 export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();

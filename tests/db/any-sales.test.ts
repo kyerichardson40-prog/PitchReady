@@ -53,4 +53,12 @@ describe('contact messages', () => {
     await assert.rejects(f.db.service().rpc('submit_contact', { ...msg, email: 'not-an-email' }), (e: unknown) => e instanceof ApiError && e.code === 'invalid_input');
     await assert.rejects(f.db.service().rpc('submit_contact', { ...msg, message: '' }), (e: unknown) => e instanceof ApiError && e.code === 'invalid_input');
   });
+
+  test('enquiries older than 12 months are deleted by the maintenance purge', async () => {
+    await psql(f.url, `insert into public.contact_messages(name, email, message, created_at) values ('Old', 'old@example.com', 'An old message here', now() - interval '13 months')`);
+    const r: any = await f.db.service().rpc('purge_contact_messages', {});
+    assert.ok(r.contact_messages_deleted >= 1);
+    assert.equal(count(await psql(f.url, `select count(*) from public.contact_messages where email = 'old@example.com'`)), 0);
+    assert.equal(count(await psql(f.url, `select count(*) from public.contact_messages where email = 'alex@example.com'`)), 1, 'recent messages stay');
+  });
 });

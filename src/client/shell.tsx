@@ -19,7 +19,7 @@ import { ErrorBox, Loading } from './components/ui.tsx';
 
 export interface BootConfig { mode: 'demo' | 'connected'; setupError?: string }
 
-const PUBLIC = new Set(['/', '/login', '/how-it-works', '/about', '/contact', '/terms']);
+const PUBLIC = new Set(['/', '/login', '/how-it-works', '/about', '/contact', '/terms', '/privacy']);
 
 function Gate({ setupError, children }: { setupError?: string; children: ReactNode }) {
   const { pathname } = useLocation();
