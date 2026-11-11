@@ -263,7 +263,7 @@ export function ManagerRepsPage() {
             </form>
             {link && (
               <div className="alert info" style={{ marginTop: '0.75rem' }}>
-                <p role="status"><strong>{link.emailed ? `Invitation emailed to ${link.email}.` : 'Not emailed: copy this link and send it to them yourself.'}</strong></p>
+                <p role="status"><strong>{link.emailed ? `Invitation emailed to ${link.email}. Ask them to check their spam or junk folder if it hasn’t arrived.` : 'Not emailed: copy this link and send it to them yourself.'}</strong></p>
                 <p style={{ wordBreak: 'break-all' }}><strong>Invite link</strong> (shown once; expires {fmtDate(link.expiresAt)}):<br /><code>{link.link}</code></p>
                 <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(link.link); setCopied(true); } catch { setCopied(false); } }}>{copied ? 'Copied' : 'Copy link'}</button>
               </div>

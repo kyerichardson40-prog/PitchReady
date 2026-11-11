@@ -23,7 +23,7 @@ export const POST = authed(async (req, { user }) => {
   const { env } = getConfig();
   const site = await siteSettings();
   if (env.SELF_SERVE_PILOTS !== 'true' || !site.pilotsEnabled) throw new ApiError(403, 'pilots_closed', 'New pilots are by arrangement at the moment. Please use the contact page.');
-  if (!user.emailConfirmed) throw new ApiError(403, 'email_unconfirmed', 'Confirm your email address first — check your inbox for the link.');
+  if (!user.emailConfirmed) throw new ApiError(403, 'email_unconfirmed', 'Confirm your email address first: check your inbox for the link, and your spam or junk folder if it isn’t there.');
   // Free pilots need a lasting work or personal address, not a temporary inbox (D46).
   if (isDisposableEmail(user.email, DISPOSABLE_DOMAINS)) {
     throw new ApiError(403, 'disposable_email', 'Free pilots need a permanent email address, not a temporary one. Sign up with your work email, or contact us.');

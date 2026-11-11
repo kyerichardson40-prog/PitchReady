@@ -70,7 +70,7 @@ export function LoginPage() {
           }
           else {
             const r = await auth.signUp(email, password);
-            if (r.confirmationRequired) setInfo('Check your email for a confirmation link. After confirming, you’ll be signed in. If you were invited, open your invitation link again.');
+            if (r.confirmationRequired) setInfo('Check your email for a confirmation link. It can take a few minutes, and it may land in your spam or junk folder, so please check there too. After confirming, you’ll be signed in. If you were invited, open your invitation link again.');
             else { await refresh(); navigate(next || '/practice'); }
           }
         } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
@@ -163,7 +163,7 @@ export function InvitePage({ token }: { token: string }) {
         </div>
       )}
       {state.status === 'wrong_email' && <ErrorBox message="You’re signed in with a different email address from the one this invitation is for. Sign out and sign in with the invited address." />}
-      {state.status === 'email_unconfirmed' && <div className="alert warn">Please confirm your email address first (check your inbox), then reload this page.</div>}
+      {state.status === 'email_unconfirmed' && <div className="alert warn">Please confirm your email address first, then reload this page. Can’t find the email? Check your spam or junk folder.</div>}
       {state.status === 'ready' && !done && (
         <button className="btn primary big" onClick={async () => {
           try { await auth.acceptInvite(token); setDone(true); await refresh(); } catch (e: any) { setState((s) => ({ ...s, error: e.message })); }
