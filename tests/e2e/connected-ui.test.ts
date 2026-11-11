@@ -320,3 +320,17 @@ test('billing: owner links a team; signed Stripe webhooks set practice time; the
   assert.deepEqual([...m.errors, ...other.errors], []);
   await m.ctx.close(); await other.ctx.close(); await r.ctx.close();
 });
+
+test('free pilots refuse temporary email addresses, with a clear message; a normal address is allowed', async () => {
+  const temp = await createUser(f.url, `farmer${Date.now()}@mailinator.com`, true, { onboarded: true });
+  const t = await as(temp);
+  const r = await t.page.request.post(srv.url + '/api/pilot', { data: { teamName: 'Farm team', yourName: 'Farmer' }, headers: { origin: srv.url } });
+  assert.equal(r.status(), 403);
+  const body = await r.json();
+  assert.equal(body.error.code, 'disposable_email');
+  assert.match(body.error.message, /permanent email address/);
+  const real = await createUser(f.url, `newboss${Date.now()}@example-agency.co.uk`, true, { onboarded: true });
+  const ok = await (await as(real)).page.request.post(srv.url + '/api/pilot', { data: { teamName: 'Real team', yourName: 'Real Boss' }, headers: { origin: srv.url } });
+  assert.equal(ok.status(), 200);
+  await t.ctx.close();
+});

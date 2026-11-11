@@ -6,6 +6,8 @@ import { getConfig } from '../../../server/config.ts';
 import { bootstrapPayload } from '../../../lib/content/bootstrap-payload.ts';
 import { notifyOwner } from '../../../server/services/notify.ts';
 import { siteSettings } from '../../../server/site-settings.ts';
+import { isDisposableEmail } from '../../../lib/domain/email-check.ts';
+import { DISPOSABLE_DOMAINS } from '../../../lib/content/disposable-domains.ts';
 
 /**
  * Start a free pilot: a signed-in person with a confirmed email and no team creates their own team
@@ -22,6 +24,10 @@ export const POST = authed(async (req, { user }) => {
   const site = await siteSettings();
   if (env.SELF_SERVE_PILOTS !== 'true' || !site.pilotsEnabled) throw new ApiError(403, 'pilots_closed', 'New pilots are by arrangement at the moment. Please use the contact page.');
   if (!user.emailConfirmed) throw new ApiError(403, 'email_unconfirmed', 'Confirm your email address first — check your inbox for the link.');
+  // Free pilots need a lasting work or personal address, not a temporary inbox (D46).
+  if (isDisposableEmail(user.email, DISPOSABLE_DOMAINS)) {
+    throw new ApiError(403, 'disposable_email', 'Free pilots need a permanent email address, not a temporary one. Sign up with your work email, or contact us.');
+  }
   const { teamName, yourName } = await readJson(req, input);
   const payload = bootstrapPayload({
     agencyName: teamName, managerEmail: user.email, managerName: yourName,
