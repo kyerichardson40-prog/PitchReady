@@ -165,3 +165,18 @@ export function managerEmail(n: ManagerNotification, baseUrl: string): { subject
     : `PitchReady: ${n.flagged.length} session${n.flagged.length === 1 ? '' : 's'} flagged for review`;
   return { subject, text: lines.join('\n') };
 }
+
+/** A practice-task reminder for one rep, sent once, the day before it's due (D44). */
+export interface TaskReminder { email: string; name: string; team: string; scenario: string; target: number; done: number; dueAt: string; note: string | null }
+export function taskReminderEmail(r: TaskReminder, baseUrl: string): { subject: string; text: string } {
+  const left = Math.max(0, r.target - r.done);
+  const when = new Date(r.dueAt).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Europe/London' });
+  const lines = [
+    `Hi ${oneLine(r.name, 60)},`, '',
+    `A reminder from ${oneLine(r.team, 80)}: practise “${oneLine(r.scenario, 80)}” ${r.target} time${r.target === 1 ? '' : 's'} by ${when}.`,
+    `You've done ${r.done} so far, so ${left} to go.`,
+    ...(r.note ? ['', `Your manager's note: ${oneLine(r.note, 300)}`] : []),
+    '', `Practise now: ${baseUrl}/practice`, '', 'PitchReady',
+  ];
+  return { subject: `Reminder: ${left} practice session${left === 1 ? '' : 's'} due soon`, text: lines.join('\n') };
+}

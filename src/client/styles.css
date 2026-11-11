@@ -931,3 +931,34 @@ button.owner-stat:hover { filter: brightness(1.07); }
   .skill-bar { grid-column: 1 / -1; order: 3; }
   .todo-list li { flex-wrap: wrap; }
 }
+
+/* The customer's reply while it is being written. */
+.partial-turn { margin: 0.75rem 0 0; padding: 0.7rem 0.9rem; border-radius: 14px; background: var(--surface-2); line-height: 1.5; }
+.typing-dots { animation: typing-pulse 1.2s ease-in-out infinite; }
+@keyframes typing-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .typing-dots { animation: none; } }
+
+/* Practice tasks (D44) */
+.task-card.muted { opacity: 0.7; }
+.task-note { margin: 0.5rem 0 0; font-style: italic; color: var(--ink-soft, #555); }
+.task-note-inline { display: block; font-style: italic; margin-top: 0.15rem; }
+.task-reps { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.task-reps li { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+.task-reps li:last-child { border-bottom: 0; }
+.task-rep-name { min-width: 9rem; font-weight: 600; }
+.task-dots { display: inline-flex; gap: 4px; }
+.task-dots span { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--teal, #1f8a7a); background: transparent; }
+.task-dots span.on { background: var(--teal, #1f8a7a); }
+.task-inbox { border-left: 4px solid var(--teal, #1f8a7a); }
+.task-check { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; color: #fff; }
+.task-check.on { background: var(--teal, #1f8a7a); border-color: var(--teal, #1f8a7a); }
+.todo-list li.is-done .todo-text strong { text-decoration: line-through; color: var(--muted, #777); }
+.chip-check { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; border: 1px solid var(--line); border-radius: 999px; }
+.row.wrap { flex-wrap: wrap; }
+.task-inbox .todo-list li { flex-wrap: wrap; align-items: flex-start; }
+.task-inbox .todo-text { flex: 1 1 14rem; min-width: 0; }
+.task-inbox .task-check { margin-top: 0.1rem; }
+@media (max-width: 560px) {
+  .task-inbox .todo-list li > .btn, .task-inbox .todo-list li > .tag { margin-left: calc(26px + 0.75rem); }
+  .task-inbox .todo-list li > .btn { width: calc(100% - 26px - 0.75rem); }
+}

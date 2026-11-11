@@ -51,6 +51,8 @@ export interface SpeechToText {
 export interface ResidentModel {
   readonly model: string;
   reply(input: ResidentContext): Promise<{ utterance: string; endConversation: boolean; reason: string | null; usage: ProviderUsage }>;
+  /** Same as reply, but calls onText with the utterance written so far while the model is still writing. */
+  replyStream?(input: ResidentContext, onText: (utteranceSoFar: string) => void): Promise<{ utterance: string; endConversation: boolean; reason: string | null; usage: ProviderUsage }>;
 }
 export interface TextToSpeech {
   readonly model: string;

@@ -102,3 +102,38 @@ test('rate card rejects missing model prices and bad currency', () => {
   assert.throws(() => card.anthropicCost('unpriced-model', 1, 1), /no anthropic price/);
   assert.throws(() => new RateCard(undefined as any).currency);
 });
+
+test('Anthropic resident streaming: reads server-sent events, passes the utterance so far, same checks and usage', async () => {
+  const json = JSON.stringify({ utterance: 'Hmm. Go on then, it’s quick?', endConversation: false, reason: null });
+  const pieces = [json.slice(0, 20), json.slice(20, 33), json.slice(33)];
+  const sse = [
+    `event: message_start\ndata: ${JSON.stringify({ type: 'message_start', message: { id: 'msg_1', model: 'test-model', usage: { input_tokens: 900 } } })}\n\n`,
+    ...pieces.map((t) => `event: content_block_delta\ndata: ${JSON.stringify({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } })}\n\n`),
+    `event: message_delta\ndata: ${JSON.stringify({ type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 25 } })}\n\n`,
+    `event: message_stop\ndata: {"type":"message_stop"}\n\n`,
+  ].join('');
+  stub(() => {
+    // Delivered in awkward chunks, splitting lines.
+    const bytes = new TextEncoder().encode(sse);
+    return new Response(new ReadableStream({ start(c) { for (let i = 0; i < bytes.length; i += 37) c.enqueue(bytes.slice(i, i + 37)); c.close(); } }), { status: 200, headers: { 'content-type': 'text/event-stream', 'request-id': 'req_9' } });
+  });
+  const seen: string[] = [];
+  const r = new AnthropicResident('sk-test', 'test-model', null);
+  const out = await r.replyStream({ scenario: SCENARIOS[0]!, drillKey: null, campaign: FICTIONAL_CAMPAIGN, transcript: [], operationId: 'op' }, (t) => seen.push(t));
+  assert.equal(out.utterance, 'Hmm. Go on then, it’s quick?');
+  assert.equal(JSON.parse(String(last!.init.body)).stream, true);
+  assert.ok(seen.length >= 2 && seen.at(-1) === out.utterance, 'utterance passed on as it grows');
+  assert.ok(seen.every((s, i) => i === 0 || s.startsWith(seen[i - 1]!)), 'only ever grows');
+  assert.equal(out.usage.inputTokens, 900);
+  assert.equal(out.usage.outputTokens, 25);
+  assert.equal(out.usage.requestId, 'req_9');
+});
+
+test('Anthropic resident streaming: max_tokens and HTTP errors are reported like the non-streaming call', async () => {
+  const r = new AnthropicResident('sk-test', 'test-model', null);
+  const input = { scenario: SCENARIOS[0]!, drillKey: null, campaign: FICTIONAL_CAMPAIGN, transcript: [], operationId: 'op' };
+  stub(() => new Response('{}', { status: 529 }));
+  await assert.rejects(r.replyStream(input, () => {}), (e: unknown) => e instanceof ProviderError && e.code === 'anthropic_http_529');
+  stub(() => new Response(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: '{"utterance":"Hel' } })}\n\ndata: ${JSON.stringify({ type: 'message_delta', delta: { stop_reason: 'max_tokens' }, usage: { output_tokens: 300 } })}\n\n`, { status: 200, headers: { 'content-type': 'text/event-stream' } }));
+  await assert.rejects(r.replyStream(input, () => {}), (e: unknown) => e instanceof ProviderError && e.code === 'anthropic_max_tokens');
+});

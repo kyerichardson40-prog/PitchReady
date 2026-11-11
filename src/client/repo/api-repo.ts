@@ -1,4 +1,5 @@
-import { RepoError, type Repository } from './types.ts';
+import type { NewTask, PracticeTask } from '../../../lib/domain/tasks.ts';
+import { RepoError, type Repository, type TurnEvents, type TurnResult } from './types.ts';
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
@@ -16,6 +17,48 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   return body as T;
 }
+/**
+ * A turn with live updates: the server sends one JSON line per event (rep words saved, reply text
+ * so far, each sentence's audio) and finishes with `done` (the usual result) or `error`.
+ */
+async function callStream(path: string, init: RequestInit, events: TurnEvents): Promise<TurnResult> {
+  const headers = new Headers(init.headers);
+  if (init.body && !(init.body instanceof FormData)) headers.set('content-type', 'application/json');
+  headers.set('accept', 'application/x-ndjson');
+  let res: Response;
+  try { res = await fetch(path, { ...init, headers, credentials: 'same-origin' }); }
+  catch { throw new RepoError('network_error', 'Could not reach the server. Check your connection and try again.'); }
+  if (!res.ok || !res.body || !(res.headers.get('content-type') ?? '').includes('ndjson')) {
+    const body = await res.json().catch(() => null);
+    if (res.ok && body) return body as TurnResult; // a server that doesn't stream: same result in one go
+    const err = body?.error ?? {};
+    throw new RepoError(err.code ?? 'http_error', err.message ?? `Request failed (${res.status}).`, err.requestId, res.status);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try { chunk = await reader.read(); }
+    catch { throw new RepoError('network_error', 'The connection dropped while the reply was on its way. Send your reply again; it won’t be added twice.'); }
+    if (chunk.done) break;
+    buf += dec.decode(chunk.value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      const ev = JSON.parse(line);
+      if (ev.type === 'rep') events.rep?.(ev.session);
+      else if (ev.type === 'partial') events.partial?.(ev.text);
+      else if (ev.type === 'audio') events.audio?.(ev.index, { base64: ev.base64, mimeType: ev.mimeType });
+      else if (ev.type === 'error') throw new RepoError(ev.code, ev.message, undefined, ev.status);
+      else if (ev.type === 'done') { const { type: _t, ...r } = ev; return r as TurnResult; }
+    }
+  }
+  throw new RepoError('network_error', 'The connection dropped while the reply was on its way. Send your reply again; it won’t be added twice.');
+}
+
 const post = <T>(path: string, data?: unknown) => call<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) });
 
 /** First-time questions (connected mode only). */
@@ -37,14 +80,18 @@ export class ApiRepository implements Repository {
   getContext() { return call<any>('/api/me'); }
   listMySessions() { return call<any>('/api/sessions'); }
   startSession(input: any) { return post<any>('/api/sessions', input); }
-  submitTypedTurn(id: string, input: any) { return post<any>(`/api/sessions/${encodeURIComponent(id)}/turns`, input); }
-  submitAudioTurn(id: string, audio: Blob, meta: { expectedSequence: number; idempotencyKey: string; durationMs: number }) {
+  submitTypedTurn(id: string, input: any, events?: TurnEvents) {
+    const path = `/api/sessions/${encodeURIComponent(id)}/turns`;
+    return events ? callStream(path, { method: 'POST', body: JSON.stringify(input) }, events) : post<any>(path, input);
+  }
+  submitAudioTurn(id: string, audio: Blob, meta: { expectedSequence: number; idempotencyKey: string; durationMs: number }, events?: TurnEvents) {
     const fd = new FormData();
     fd.set('audio', audio, 'turn');
     fd.set('expectedSequence', String(meta.expectedSequence));
     fd.set('idempotencyKey', meta.idempotencyKey);
     fd.set('durationMs', String(Math.round(meta.durationMs)));
-    return call<any>(`/api/sessions/${encodeURIComponent(id)}/turns`, { method: 'POST', body: fd });
+    const path = `/api/sessions/${encodeURIComponent(id)}/turns`;
+    return events ? callStream(path, { method: 'POST', body: fd }, events) : call<any>(path, { method: 'POST', body: fd });
   }
   endSession(id: string, input: any) { return post<any>(`/api/sessions/${encodeURIComponent(id)}/end`, input); }
   getSession(id: string) { return call<any>(`/api/sessions/${encodeURIComponent(id)}`); }
@@ -70,6 +117,9 @@ export class ApiRepository implements Repository {
   async setScenarioArchived(key: string, archived: boolean) { await post(`/api/manager/scenarios/${encodeURIComponent(key)}/archive`, { archived }); }
   async setScenarioAssignments(userId: string, keys: string[]) { await call(`/api/manager/members/${encodeURIComponent(userId)}/scenarios`, { method: 'PUT', body: JSON.stringify({ keys }) }); }
   getRepProfile(userId: string) { return call<any>(`/api/manager/members/${encodeURIComponent(userId)}`); }
+  listTasks(opts: { includeArchived?: boolean } = {}) { return call<PracticeTask[]>(`/api/tasks${opts.includeArchived ? '?archived=1' : ''}`); }
+  createTask(input: NewTask) { return post<PracticeTask>('/api/tasks', input); }
+  async archiveTask(id: string) { await call(`/api/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }); }
 }
 
 export const auth = {

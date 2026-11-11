@@ -1,7 +1,7 @@
 import { getDb } from '../db.ts';
 import { runEvaluationJob } from './evaluation.ts';
 import { getConfig } from '../config.ts';
-import { emailConfigured, managerEmail, sendEmail, type ManagerNotification } from './notify.ts';
+import { emailConfigured, managerEmail, sendEmail, taskReminderEmail, type ManagerNotification, type TaskReminder } from './notify.ts';
 
 export type MaintenanceResult = Record<string, unknown> & { evaluations: Record<string, number> };
 
@@ -26,7 +26,8 @@ export async function runMaintenance(budgetMs = 50_000): Promise<MaintenanceResu
   let renewed: Record<string, unknown> = {};
   try { renewed = (await getDb().service().rpc<any>('renew_allowances', {})) ?? {}; } catch { /* not installed yet */ }
   const emails = await sendManagerEmails().catch(() => ({}));
-  return { ...(result ?? {}), ...purged, ...renewed, ...emails, evaluations };
+  const reminders = await sendTaskReminders().catch(() => ({}));
+  return { ...(result ?? {}), ...purged, ...renewed, ...emails, ...reminders, evaluations };
 }
 
 /**
@@ -44,4 +45,21 @@ export async function sendManagerEmails(): Promise<Record<string, number>> {
     if ((await sendEmail({ to: n.managers, subject, text, tag: 'manager' })) === 'sent') sent++;
   }
   return sent ? { manager_emails_sent: sent } : {};
+}
+
+/**
+ * Practice-task reminders (D44): one email per rep per task, about a day before it's due, only while
+ * they still have sessions to do. Claimed only when email can go out; skipped until the migration is applied.
+ */
+export async function sendTaskReminders(): Promise<Record<string, number>> {
+  if (!emailConfigured()) return {};
+  let due: TaskReminder[];
+  try { due = (await getDb().service().rpc<TaskReminder[]>('claim_task_reminders', {})) ?? []; } catch { return {}; }
+  let sent = 0;
+  const base = getConfig().env.APP_BASE_URL.replace(/\/$/, '');
+  for (const r of due) {
+    const { subject, text } = taskReminderEmail(r, base);
+    if ((await sendEmail({ to: [r.email], subject, text, tag: 'task-reminder' })) === 'sent') sent++;
+  }
+  return sent ? { task_reminders_sent: sent } : {};
 }

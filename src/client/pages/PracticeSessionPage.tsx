@@ -6,7 +6,7 @@ import { LIMITS, limitsOfSession, sessionLimits } from '../../../lib/domain/limi
 import type { DrillKey, PracticeSession, ScenarioKey } from '../../../lib/domain/types.ts';
 import { newKey, useApp } from '../app-context.tsx';
 import { useNavigate, useLocation } from '../router.tsx';
-import { RepoError, type TurnResult } from '../repo/types.ts';
+import { RepoError, type TurnEvents, type TurnResult } from '../repo/types.ts';
 import { ErrorBox, FictionalTag } from '../components/ui.tsx';
 import { Transcript } from '../components/Transcript.tsx';
 import { HANDS_FREE_RECORDING_TEXT, MIC_STATE_TEXT, TurnRecorder, recordingSupported, type MicState } from '../voice/recorder.ts';
@@ -35,6 +35,14 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   /** While the AI works on a reply the server pauses the clock; the display freezes at this moment. */
   const [pausedAt, setPausedAt] = useState<number | null>(null);
 
+  /** The customer's reply while it is still being written (streamed turns). */
+  const [partial, setPartial] = useState<string | null>(null);
+  // Sentence clips of the current reply, played one after another as they arrive.
+  const clips = useRef<string[]>([]);
+  const clipPlaying = useRef(false);
+  const replyDone = useRef(true);
+  const afterSpeechWaiters = useRef<(() => void)[]>([]);
+
   const recorder = useRef<TurnRecorder | null>(null);
   const audioUrl = useRef<string | null>(null);
   const audioEl = useRef<HTMLAudioElement | null>(null);
@@ -52,6 +60,8 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
 
   // Release every media resource on unmount.
   useEffect(() => () => {
+    for (const u of clips.current) URL.revokeObjectURL(u);
+    clips.current = [];
     recorder.current?.release();
     if (audioUrl.current) URL.revokeObjectURL(audioUrl.current);
     audioEl.current?.pause();
@@ -83,6 +93,53 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     navigate(`/sessions/${encodeURIComponent(s.id)}`);
   }, [refresh]);
 
+  /** The customer has finished speaking (all clips played, or skipped): back to the rep. */
+  const afterSpeech = useCallback(() => {
+    setMic((m) => (m === 'permission_denied' || m === 'unsupported' || m === 'recording' ? m : recorder.current?.hasStream ? 'ready' : 'not_requested'));
+    const waiters = afterSpeechWaiters.current; afterSpeechWaiters.current = [];
+    waiters.forEach((w) => w());
+    if (handsFreeRef.current && recorder.current?.hasStream) setTimeout(() => startListening.current(), 250);
+  }, []);
+
+  const playNextClip = useCallback(() => {
+    const url = clips.current.shift();
+    if (!url) { clipPlaying.current = false; if (replyDone.current) afterSpeech(); return; }
+    clipPlaying.current = true;
+    const el = audioEl.current ?? new Audio();
+    audioEl.current = el;
+    if (audioUrl.current) URL.revokeObjectURL(audioUrl.current);
+    audioUrl.current = url;
+    el.src = url;
+    el.onended = () => playNextClip();
+    setMic((m) => (m === 'permission_denied' || m === 'unsupported' ? m : 'resident_speaking'));
+    el.play().then(() => setTapToPlay(null)).catch(() => {
+      // Autoplay blocked: the button below plays this clip, and the rest follow on.
+      clipPlaying.current = false;
+      clips.current.unshift(url);
+      audioUrl.current = null;
+      setTapToPlay('…');
+    });
+  }, [afterSpeech]);
+
+  const queueClip = useCallback((a: { base64: string; mimeType: string }) => {
+    const bytes = Uint8Array.from(atob(a.base64), (c) => c.charCodeAt(0));
+    clips.current.push(URL.createObjectURL(new Blob([bytes], { type: a.mimeType })));
+    if (!clipPlaying.current) playNextClip();
+  }, [playNextClip]);
+
+  /** Live updates for one turn: the rep's words, the reply as it's written, and its voice. */
+  const turnEvents = useCallback((): TurnEvents => {
+    replyDone.current = false;
+    return {
+      rep: (s) => { setSession(s); setMic((m) => (m === 'transcribing' || m === 'uploading' || m === 'ready' || m === 'not_requested' ? 'resident_thinking' : m)); },
+      partial: (t) => setPartial(t),
+      audio: (_i, a) => queueClip(a),
+    };
+  }, [queueClip]);
+
+  /** Typed turns: also empty the reply box as soon as the reply is saved. */
+  const withClearedInput = (ev: TurnEvents): TurnEvents => ({ ...ev, rep: (s) => { ev.rep?.(s); setText(''); } });
+
   const speakResident = useCallback(async (r: TurnResult, prevCount: number) => {
     const newResident = r.session.turns.slice(prevCount).filter((t) => t.speaker === 'resident').at(-1);
     if (!newResident) return;
@@ -111,7 +168,20 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
 
   const handleResult = useCallback(async (r: TurnResult, prevCount: number) => {
     setSession(r.session);
+    setPartial(null);
     if (r.notices.length) setNotice(r.notices.join(' '));
+    if (r.streamed) {
+      replyDone.current = true;
+      const speaking = clipPlaying.current || clips.current.length > 0;
+      if (r.session.status !== 'active') {
+        // Let the customer finish their last line (up to 15 seconds) before showing the feedback.
+        if (speaking) await new Promise<void>((res) => { afterSpeechWaiters.current.push(res); setTimeout(res, 15_000); });
+        await finish(r.session);
+        return;
+      }
+      if (!speaking) afterSpeech();
+      return;
+    }
     if (r.session.status !== 'active') { await finish(r.session); return; }
     await speakResident(r, prevCount);
   }, [finish, speakResident]);
@@ -146,12 +216,13 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     const prev = session.turns.length;
     try {
       setMic((m) => (m === 'ready' || m === 'not_requested' ? 'resident_thinking' : m));
-      const r = await repo.submitTypedTurn(session.id, { text: text.trim(), expectedSequence: prev + 1, idempotencyKey: pendingKey.current });
+      const r = await repo.submitTypedTurn(session.id, { text: text.trim(), expectedSequence: prev + 1, idempotencyKey: pendingKey.current }, withClearedInput(turnEvents()));
       pendingKey.current = null;
       setText('');
-      setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
+      if (!r.streamed) setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
       await handleResult(r, prev);
     } catch (e) {
+      setPartial(null); replyDone.current = true;
       setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
       await handleError(e); // pendingKey is kept so a retry cannot create a duplicate turn
     } finally { setBusy(false); setPausedAt(null); }
@@ -176,8 +247,11 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
   const skipCustomer = () => {
     audioEl.current?.pause();
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
-    setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
-    if (handsFreeRef.current && recorder.current?.hasStream) setTimeout(() => startListening.current(), 150);
+    for (const u of clips.current) URL.revokeObjectURL(u);
+    clips.current = [];
+    clipPlaying.current = false;
+    if (replyDone.current) afterSpeech();
+    else setMic(recorder.current?.hasStream ? 'ready' : 'not_requested');
   };
 
   const toggleRecord = async () => {
@@ -204,11 +278,12 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
     const prev = session.turns.length;
     try {
       setMic('transcribing');
-      const r = await repo.submitAudioTurn(session.id, out.blob, { expectedSequence: prev + 1, idempotencyKey: pendingKey.current, durationMs: out.durationMs });
+      const r = await repo.submitAudioTurn(session.id, out.blob, { expectedSequence: prev + 1, idempotencyKey: pendingKey.current, durationMs: out.durationMs }, turnEvents());
       pendingKey.current = null;
-      setMic('ready');
+      if (!r.streamed) setMic('ready');
       await handleResult(r, prev);
     } catch (e) {
+      setPartial(null); replyDone.current = true;
       setMic('ready');
       await handleError(e);
     } finally { setBusy(false); setPausedAt(null); }
@@ -282,9 +357,15 @@ export function PracticeSessionPage({ scenarioId }: { scenarioId: string }) {
       </div>
       <div className="card" aria-live="polite">
         <Transcript session={session} />
+        {partial && (
+          <p className="partial-turn"><strong>{customer.label.replace(/^./, (c) => c.toUpperCase())}:</strong> {partial}<span className="typing-dots" aria-hidden="true"> …</span></p>
+        )}
+        {!partial && busy && session.turns.at(-1)?.speaker === 'rep' && (
+          <p className="partial-turn muted" role="status">The {customer.label} is thinking<span className="typing-dots" aria-hidden="true">…</span></p>
+        )}
       </div>
       {tapToPlay && (
-        <div className="alert info"><button className="btn primary" onClick={() => { void audioEl.current?.play().then(() => setTapToPlay(null)).catch(() => {}); setMic('resident_speaking'); }}>Tap to hear the {customer.label}</button></div>
+        <div className="alert info"><button className="btn primary" onClick={() => { if (clips.current.length) { setTapToPlay(null); playNextClip(); } else { void audioEl.current?.play().then(() => setTapToPlay(null)).catch(() => {}); setMic('resident_speaking'); } }}>Tap to hear the {customer.label}</button></div>
       )}
       {notice && <div className="alert warn" role="status">{notice}</div>}
       {error && <ErrorBox message={error} />}

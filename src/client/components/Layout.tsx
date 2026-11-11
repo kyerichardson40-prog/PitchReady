@@ -15,7 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const role = ctx?.user?.role;
   const links: [string, string][] = role === 'manager'
-    ? [['/manager', 'Overview'], ['/manager/reps', 'Team'], ['/manager/scenarios', 'Scenarios'], ['/manager/campaign', 'Rules & campaign'], ['/settings', 'Settings']]
+    ? [['/manager', 'Overview'], ['/manager/reps', 'Team'], ['/manager/tasks', 'Practice tasks'], ['/manager/scenarios', 'Scenarios'], ['/manager/campaign', 'Rules & campaign'], ['/settings', 'Settings']]
     : role === 'rep'
       ? [['/practice', 'Practise'], ['/history', 'History'], ['/settings', 'Settings']]
       : [];

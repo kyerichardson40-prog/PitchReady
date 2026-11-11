@@ -6,6 +6,7 @@ import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 import { PRACTICE_MINUTES, practiceMinutesOf, type PracticeMinutes } from '../../../lib/domain/limits.ts';
 import { MIN_SAMPLE, type WeekTrend } from '../../../lib/domain/metrics.ts';
 import { onboardingApi } from '../repo/api-repo.ts';
+import { dueText, taskProgress } from '../../../lib/domain/tasks.ts';
 import { AnswerCounts, AnswerQuotes } from '../components/Answers.tsx';
 import { campaignPackSchema, rubricDimensionsSchema } from '../../../lib/domain/schemas.ts';
 import type { CampaignPack, ManagerReview, RubricVersion } from '../../../lib/domain/types.ts';
@@ -55,6 +56,7 @@ export function ManagerOverviewPage() {
   const ov = useAsync(() => (isManager ? repo.getOverview(days) : Promise.resolve(null)), [repo, days, ctx?.user?.id]);
   const sessions = useAsync(() => (isManager ? repo.listTeamSessions() : Promise.resolve([])), [repo, ctx?.user?.id]);
   const roster = useAsync(() => (isManager ? repo.getRoster() : Promise.resolve(null)), [repo, ctx?.user?.id]);
+  const tasks = useAsync(() => (isManager ? repo.listTasks().catch(() => []) : Promise.resolve([])), [repo, ctx?.user?.id]);
   if (guard) return guard;
   const o = ov.data;
   const flagged = (sessions.data ?? []).filter((s) => s.openConcerns + s.openReports > 0);
@@ -63,6 +65,7 @@ export function ManagerOverviewPage() {
     .map((m) => ({ ...m, status: repStatus(m) }))
     .sort((a, b) => a.status.order - b.status.order || a.name.localeCompare(b.name));
   const notStarted = reps.filter((r) => r.completed === 0);
+  const lateTasks = (tasks.data ?? []).map((t) => ({ t, p: taskProgress(t) })).filter((x) => x.p.overdue > 0);
   const quiet = reps.filter((r) => r.completed > 0 && (daysSince(r.lastPracticeAt) ?? 99) > 7);
   const scored = (o?.breakdown ?? []).filter((d) => d.enoughData && d.mean !== null).sort((a, b) => b.mean! - a.mean!);
   const best = scored[0];
@@ -115,7 +118,7 @@ export function ManagerOverviewPage() {
       )}
 
       {/* 3. Things to do. */}
-      {(flagged.length > 0 || quiet.length > 0 || notStarted.length > 0) && (
+      {(flagged.length > 0 || quiet.length > 0 || notStarted.length > 0 || lateTasks.length > 0) && (
         <div className="card">
           <h2>Needs your attention</h2>
           <ul className="todo-list">
@@ -124,6 +127,13 @@ export function ManagerOverviewPage() {
                 <span className="tag red">Review</span>
                 <span className="todo-text"><strong>{s.repName}</strong> · {sessionTitle(s)}<span className="small muted"> · {[s.openConcerns && `${s.openConcerns} concern${s.openConcerns === 1 ? '' : 's'} spotted`, s.openReports && `${s.openReports} feedback report${s.openReports === 1 ? '' : 's'} from the rep`].filter(Boolean).join(', ')} · {fmtDate(s.endedAt)}</span></span>
                 <Link className="btn" to={`/manager/sessions/${s.id}`}>Open</Link>
+              </li>
+            ))}
+            {lateTasks.map(({ t, p }) => (
+              <li key={t.id}>
+                <span className="tag red">Overdue</span>
+                <span className="todo-text"><strong>{t.scenarioTitle} × {t.target}</strong><span className="small muted"> · {p.overdue} of {p.total} rep{p.total === 1 ? '' : 's'} didn’t finish · {dueText(t.dueAt).toLowerCase()}</span></span>
+                <Link className="btn" to="/manager/tasks">View</Link>
               </li>
             ))}
             {[...notStarted, ...quiet].map((r) => (

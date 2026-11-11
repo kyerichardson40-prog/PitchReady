@@ -1,3 +1,4 @@
+import type { NewTask, PracticeTask } from '../../../lib/domain/tasks.ts';
 import type { PracticeMinutes } from '../../../lib/domain/limits.ts';
 import type { SalesContext } from '../../../lib/domain/sales.ts';
 import type { CampaignPack, MustSay, ObjectionAnswer, Drill, DrillKey, EvaluationResult, FeedbackReport, ManagerReview, PracticeSession, RubricVersion, Scenario, ScenarioKey } from '../../../lib/domain/types.ts';
@@ -49,6 +50,15 @@ export interface TurnResult {
   session: PracticeSession;
   residentAudio: { base64: string; mimeType: string } | null;
   notices: string[];
+  /** The reply's voice was already sent sentence by sentence through TurnEvents.audio. */
+  streamed?: boolean;
+}
+
+/** Live updates while a turn is processed (connected mode; the demo ignores them). */
+export interface TurnEvents {
+  rep?(session: PracticeSession): void;
+  partial?(text: string): void;
+  audio?(index: number, audio: { base64: string; mimeType: string }): void;
 }
 
 export interface RosterData {
@@ -82,8 +92,8 @@ export interface Repository {
   getContext(): Promise<AppContextData>;
   listMySessions(): Promise<PracticeSession[]>;
   startSession(input: { scenarioKey: ScenarioKey; drillKey: DrillKey | null; parentSessionId: string | null; idempotencyKey: string }): Promise<TurnResult>;
-  submitTypedTurn(id: string, input: { text: string; expectedSequence: number; idempotencyKey: string }): Promise<TurnResult>;
-  submitAudioTurn(id: string, audio: Blob, meta: { expectedSequence: number; idempotencyKey: string; durationMs: number }): Promise<TurnResult>;
+  submitTypedTurn(id: string, input: { text: string; expectedSequence: number; idempotencyKey: string }, events?: TurnEvents): Promise<TurnResult>;
+  submitAudioTurn(id: string, audio: Blob, meta: { expectedSequence: number; idempotencyKey: string; durationMs: number }, events?: TurnEvents): Promise<TurnResult>;
   endSession(id: string, input: { idempotencyKey: string }): Promise<PracticeSession>;
   getSession(id: string): Promise<{ session: PracticeSession; reports: FeedbackReport[]; reviews: ManagerReview[] }>;
   retryEvaluation(id: string): Promise<PracticeSession>;
@@ -111,6 +121,10 @@ export interface Repository {
   setScenarioArchived(key: string, archived: boolean): Promise<void>;
   setScenarioAssignments(userId: string, keys: string[]): Promise<void>;
   getRepProfile(userId: string): Promise<RepProfile>;
+  // practice tasks (D44): managers see the team's, reps their own
+  listTasks(opts?: { includeArchived?: boolean }): Promise<PracticeTask[]>;
+  createTask(input: NewTask): Promise<PracticeTask>;
+  archiveTask(id: string): Promise<void>;
   // demo only
   demoReset?(): Promise<void>;
   demoSwitchUser?(userId: string): Promise<void>;

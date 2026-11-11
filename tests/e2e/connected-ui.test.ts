@@ -56,7 +56,8 @@ test('rep: spoken turn via fake microphone → mock transcription → resident r
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Stop and send' }).click();
   await page.getByText('[mock transcription of recorded audio]').waitFor({ timeout: 15000 });
-  assert.ok((await page.locator('.bubble.resident').count()) >= 2, 'resident replied');
+  // Replies stream (D43): the rep's words show first, the resident's reply follows (or the practice ends).
+  await page.waitForFunction(() => !location.pathname.startsWith('/practice/') || document.querySelectorAll('.bubble.resident').length >= 2, null, { timeout: 30_000 });
   if (page.url().includes('/practice/')) {
     const typed = page.getByLabel('Or type your reply');
     if (await typed.isVisible()) {
@@ -229,4 +230,52 @@ test('welcome questions: a new rep is asked once, sees suggested practice, and t
   await s.page.getByRole('button', { name: 'Skip for now' }).click();
   await s.page.waitForURL(/\/(start|practice)$/);
   await s.ctx.close();
+});
+
+test('turns stream: rep words first, then the reply, its voice in order, then the result', async () => {
+  const { page, ctx } = await as(f.B.rep2);
+  await page.goto(srv.url + '/settings');
+  const out = await page.evaluate(async () => {
+    const key = () => `k-${Math.random().toString(36).slice(2, 14)}`;
+    const s = await (await fetch('/api/sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ scenarioKey: 'busy', drillKey: null, parentSessionId: null, idempotencyKey: key() }) })).json();
+    const res = await fetch(`/api/sessions/${s.session.id}/turns`, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/x-ndjson' }, body: JSON.stringify({ text: 'Hi, I am Sam. Have you got a moment?', expectedSequence: 2, idempotencyKey: key() }) });
+    const text = await res.text();
+    await fetch(`/api/sessions/${s.session.id}/end`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idempotencyKey: key() }) }).catch(() => null);
+    return { type: res.headers.get('content-type'), lines: text.trim().split('\n').map((l) => JSON.parse(l)) };
+  });
+  assert.match(out.type ?? '', /ndjson/);
+  const types = out.lines.map((l: any) => l.type);
+  assert.equal(types[0], 'rep');
+  assert.equal(types.at(-1), 'done');
+  assert.ok(!types.includes('error'));
+  const audio = out.lines.filter((l: any) => l.type === 'audio').map((l: any) => l.index);
+  assert.deepEqual(audio, [...audio].sort((a: number, b: number) => a - b), 'voice clips arrive in order');
+  assert.equal(out.lines.at(-1).streamed, true);
+  await ctx.close();
+});
+
+test('practice tasks: manager sets one through the real routes; the rep sees it on Practise; others are refused', async () => {
+  const m = await as(f.A.manager);
+  await m.page.goto(srv.url + '/manager/tasks');
+  await m.page.getByRole('heading', { name: 'Practice tasks', exact: true }).waitFor();
+  await m.page.getByRole('button', { name: 'New task' }).click();
+  await m.page.getByLabel('Scenario').selectOption({ index: 0 });
+  const scenario = await m.page.getByLabel('Scenario').evaluate((el: HTMLSelectElement) => el.selectedOptions[0]!.text);
+  await m.page.getByLabel('How many times').fill('3');
+  await m.page.getByRole('button', { name: 'Set task' }).click();
+  await m.page.getByText(/^Task set:/).waitFor();
+  await m.page.locator('.task-card', { hasText: `${scenario} × 3` }).getByText(/0 of \d+ done/).waitFor();
+  // A rep can't set one, and another team can't archive it.
+  const r = await as(f.A.rep1);
+  const refused = await r.page.request.post(srv.url + '/api/tasks', { data: { scenarioKey: 'busy', target: 1 }, headers: { origin: srv.url } });
+  assert.equal(refused.status(), 403);
+  assert.equal((await refused.json()).error.code, 'forbidden');
+  await r.page.goto(srv.url + '/practice');
+  await r.page.locator('.task-inbox').getByText(`Practise “${scenario}” 3 times`).waitFor();
+  await r.page.locator('.task-inbox').getByText(/0 of 3 done · Due /).waitFor();
+  const list: any[] = await (await r.page.request.get(srv.url + '/api/tasks')).json();
+  const b = await as(f.B.manager);
+  assert.equal((await b.page.request.delete(`${srv.url}/api/tasks/${list[0].id}`, { headers: { origin: srv.url } })).status(), 404);
+  assert.deepEqual([...m.errors, ...r.errors], []);
+  await m.ctx.close(); await r.ctx.close(); await b.ctx.close();
 });

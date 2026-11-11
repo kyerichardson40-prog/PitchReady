@@ -11,6 +11,7 @@ import { LIMITS, limitsOfSession, practiceMinutesOf, sessionLimits } from '../do
 import { buildDirectory, buildRepProfile, computeOverview, type RepDirectoryRow, type RepProfile, type TeamSessionSummary } from '../domain/metrics.ts';
 import { chargeableSeconds, residentDirective } from '../domain/session-rules.ts';
 import { transcriptAtRevision, turnLabel } from '../domain/transcript.ts';
+import { TASK_MAX_TARGET, TASK_NOTE_MAX, type NewTask, type PracticeTask } from '../domain/tasks.ts';
 import type {
   CampaignPack, DrillKey, EndReason, EvaluationResult, FeedbackReport, ManagerReview, PracticeSession, RubricVersion, Scenario, ScenarioKey, Turn,
 } from '../domain/types.ts';
@@ -43,7 +44,10 @@ export interface DemoState {
   ledger: { operationId: string; sessionId: string; kind: 'reservation' | 'settlement' | 'release'; seconds: number; at: string }[];
   deletionRequests: { id: string; userId: string; scope: string; requestedAt: string; status: 'requested' }[];
   idempotency: Record<string, string>;
+  /** Practice tasks set by the manager (D44). Optional so older saved demos still load. */
+  tasks?: DemoTask[];
 }
+export interface DemoTask { id: string; scenarioKey: string; note: string | null; target: number; dueAt: string | null; repIds: string[] | null; createdBy: string; createdAt: string; archivedAt: string | null }
 
 export class DemoError extends Error {
   code: string;
@@ -92,6 +96,8 @@ export function createSeedState(now = new Date()): DemoState {
     sessions: [], reports: [], reviews: [],
     usage: { periodStart: iso(ago(60 * 24 * 5)), periodEnd: iso(new Date(now.getTime() + 9 * 86400_000)), allowanceSeconds: 9000, consumedSeconds: 0, reservedSeconds: 0 },
     ledger: [], deletionRequests: [], idempotency: {},
+    tasks: [{ id: 'task-demo-1', scenarioKey: 'sceptical', note: 'Before Saturday’s high-street shift: be ready for ‘how do I know you’re real?’', target: 2,
+      dueAt: iso(new Date(now.getTime() + 2 * 86400_000)), repIds: null, createdBy: 'demo-manager', createdAt: iso(ago(60 * 40)), archivedAt: null }],
   };
 
   const history: { rep: string; scenario: ScenarioKey; minsAgo: number; lines: string[]; evaluate: boolean }[] = [
@@ -587,4 +593,46 @@ export function recoverExpired(s: DemoState, now = new Date()) {
       s.currentUserId = prev;
     }
   }
+}
+
+// ---------------- practice tasks (D44) ----------------
+function taskJson(s: DemoState, t: DemoTask, only: string | null): PracticeTask {
+  const reps = s.people.filter((p) => p.role === 'rep' && p.active && (!t.repIds || t.repIds.includes(p.id)) && (!only || p.id === only));
+  const done = (rep: string) => s.sessions.filter((x) => x.repId === rep && !x.drillKey && x.status === 'ended' && x.scenarioKey === t.scenarioKey && (x.endedAt ?? '') >= t.createdAt).length;
+  return {
+    id: t.id, scenarioKey: t.scenarioKey, scenarioTitle: findScenario(s, t.scenarioKey)?.title ?? t.scenarioKey, note: t.note, target: t.target,
+    dueAt: t.dueAt, createdAt: t.createdAt, archived: !!t.archivedAt, everyone: !t.repIds,
+    createdBy: s.people.find((p) => p.id === t.createdBy)?.name ?? 'Your manager',
+    assignees: reps.sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
+      userId: p.id, name: p.name, done: Math.min(done(p.id), t.target), canPractise: allowedScenarios(s, p.id).some((x) => x.key === t.scenarioKey),
+    })),
+  };
+}
+export function listTasks(s: DemoState, includeArchived = false): PracticeTask[] {
+  const me = currentUser(s);
+  return (s.tasks ?? [])
+    .filter((t) => (me.role === 'manager' ? (!t.archivedAt || includeArchived) : !t.archivedAt && (!t.repIds || t.repIds.includes(me.id))))
+    .map((t) => taskJson(s, t, me.role === 'manager' ? null : me.id))
+    .sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999') || b.createdAt.localeCompare(a.createdAt));
+}
+export function createTask(s: DemoState, input: NewTask, now = new Date()): PracticeTask {
+  const me = currentUser(s);
+  if (me.role !== 'manager') throw new DemoError('forbidden', 'Only managers can set practice tasks.');
+  const sc = findScenario(s, input.scenarioKey);
+  if (!sc || sc.archived) throw new DemoError('invalid_input', 'Choose a scenario from the list.');
+  if (!Number.isInteger(input.target) || input.target < 1 || input.target > TASK_MAX_TARGET) throw new DemoError('invalid_input', `Choose between 1 and ${TASK_MAX_TARGET} times.`);
+  if (input.dueAt && new Date(input.dueAt).getTime() <= now.getTime()) throw new DemoError('invalid_input', 'Choose a due date in the future.');
+  const note = input.note?.trim() || null;
+  if (note && note.length > TASK_NOTE_MAX) throw new DemoError('invalid_input', `Keep the note under ${TASK_NOTE_MAX} characters.`);
+  const repIds = input.repIds?.length ? [...new Set(input.repIds)] : null;
+  if (repIds?.some((id) => !s.people.some((p) => p.id === id && p.role === 'rep' && p.active))) throw new DemoError('invalid_input', 'Choose reps from your team.');
+  const t: DemoTask = { id: uid('task'), scenarioKey: sc.key, note, target: input.target, dueAt: input.dueAt ?? null, repIds, createdBy: me.id, createdAt: iso(now), archivedAt: null };
+  (s.tasks ??= []).push(t);
+  return taskJson(s, t, null);
+}
+export function archiveTask(s: DemoState, id: string, now = new Date()): void {
+  if (currentUser(s).role !== 'manager') throw new DemoError('forbidden', 'Only managers can archive practice tasks.');
+  const t = s.tasks?.find((x) => x.id === id);
+  if (!t) throw new DemoError('not_found', 'That task no longer exists.');
+  t.archivedAt ??= iso(now);
 }

@@ -1,5 +1,6 @@
 import { getScenario } from '../../lib/content/scenarios.ts';
 import { siteSettings } from '../site-settings.ts';
+import { nextSpeakableEnd, speakableChunks } from '../../lib/ai/stream-text.ts';
 import { LIMITS, limitsOfSession, normaliseAudioMime } from '../../lib/domain/limits.ts';
 import { residentDirective } from '../../lib/domain/session-rules.ts';
 import { transcriptAtRevision } from '../../lib/domain/transcript.ts';
@@ -12,7 +13,18 @@ import type { AuthUser } from '../auth.ts';
 import { metered } from './metered.ts';
 import { runEvaluationJob } from './evaluation.ts';
 
-export interface TurnResponse { session: PracticeSession; residentAudio: { base64: string; mimeType: string } | null; notices: string[] }
+export interface TurnResponse { session: PracticeSession; residentAudio: { base64: string; mimeType: string } | null; notices: string[]; streamed?: boolean }
+
+/**
+ * Live updates while a turn is processed (the browser asks for them with Accept: application/x-ndjson):
+ * the rep's words once saved, the customer's reply as it is written, then its voice one sentence
+ * at a time, in order. Without them, the turn returns in one go as before.
+ */
+export interface TurnEvents {
+  rep?(session: PracticeSession): void;
+  partial?(text: string): void;
+  audio?(index: number, audio: { base64: string; mimeType: string }): void;
+}
 
 function requireProviders(): Providers {
   const p = getProviders();
@@ -28,6 +40,48 @@ async function speak(p: Providers, sessionId: string, text: string, opId: string
   } catch {
     notices.push('The customer’s voice is unavailable right now; the reply is shown as text.');
     return null;
+  }
+}
+
+/**
+ * Voices the customer's reply one sentence at a time while it is being written. Each sentence is
+ * sent for speech as soon as it is complete; the clips are passed on strictly in order.
+ */
+class SentenceVoice {
+  private spoken = 0; private index = 0; private chain: Promise<void> = Promise.resolve(); private cancelled = false; private lastText = '';
+  private p: Providers; private sessionId: string; private requestId: string; private notices: string[]; private events: TurnEvents;
+  constructor(p: Providers, sessionId: string, requestId: string, notices: string[], events: TurnEvents) {
+    this.p = p; this.sessionId = sessionId; this.requestId = requestId; this.notices = notices; this.events = events;
+  }
+  feed(soFar: string) {
+    const text = soFar.slice(0, LIMITS.residentUtteranceMaxChars);
+    if (text !== this.lastText) { this.lastText = text; this.events.partial?.(text); }
+    for (let end = nextSpeakableEnd(text, this.spoken, this.spoken === 0); end !== null; end = nextSpeakableEnd(text, this.spoken, false)) {
+      this.say(text.slice(this.spoken, end));
+      this.spoken = end;
+    }
+  }
+  /** After the reply is complete: voices whatever hasn't been, then waits for every clip to be passed on. */
+  async finish(utterance: string) {
+    if (this.spoken === 0) for (const chunk of speakableChunks(utterance)) { this.say(chunk); }
+    else if (utterance.startsWith(this.lastText.slice(0, this.spoken))) this.say(utterance.slice(this.spoken));
+    this.spoken = utterance.length;
+    await this.chain;
+  }
+  cancel() { this.cancelled = true; }
+  private say(text: string) {
+    const t = text.trim();
+    if (!t || this.cancelled) return;
+    const i = this.index++;
+    const pending = this.notices.length;
+    const audio = speak(this.p, this.sessionId, t, `tts:${this.sessionId}:${this.requestId}:${i}`, this.notices);
+    this.chain = this.chain.then(async () => {
+      const a = await audio;
+      // One "voice unavailable" notice is enough, however many sentences failed.
+      const msg = this.notices[pending];
+      if (msg && this.notices.indexOf(msg) < pending) this.notices.splice(pending, 1);
+      if (a && !this.cancelled) this.events.audio?.(i, a);
+    });
   }
 }
 
@@ -50,6 +104,7 @@ export async function startSession(user: AuthUser, input: { scenarioKey: string;
 export async function submitTurn(user: AuthUser, sessionId: string, input:
   | { kind: 'typed'; text: string; expectedSequence: number; idempotencyKey: string }
   | { kind: 'audio'; audio: Uint8Array; mimeType: string; expectedSequence: number; idempotencyKey: string; durationMs?: number },
+  events?: TurnEvents,
 ): Promise<TurnResponse> {
   const p = requireProviders();
   const db = getDb().user(user.accessToken, user.id);
@@ -66,7 +121,7 @@ export async function submitTurn(user: AuthUser, sessionId: string, input:
     if (input.audio.byteLength < 100) throw new ApiError(422, 'audio_too_short', 'That recording was too short. Try again or type your reply.');
     const begun = await db.rpc<{ ok: boolean; duplicate: boolean; code?: string; session?: PracticeSession }>('begin_turn', { session_id: sessionId, expected_sequence: input.expectedSequence, request_id: input.idempotencyKey });
     if (!begun.ok) return { session: begun.session!, residentAudio: null, notices: ['Time was up before that turn arrived.'] };
-    if (begun.duplicate) return continueResident(p, user, begun.session!, input.idempotencyKey, notices);
+    if (begun.duplicate) return continueResident(p, user, begun.session!, input.idempotencyKey, notices, events);
     try {
       const out = await metered(p, { sessionId, operationId: `stt:${sessionId}:${input.idempotencyKey}`, operation: 'stt', model: p.stt.model, sizeHint: Math.ceil((input.durationMs ?? LIMITS.recordingMaxSeconds * 1000) / 1000) },
         () => p.stt!.transcribe({ audio: input.audio, mimeType: mime, operationId: input.idempotencyKey }));
@@ -92,11 +147,12 @@ export async function submitTurn(user: AuthUser, sessionId: string, input:
     await runEvaluationJob(sessionId).catch(() => undefined);
     return { session: (await db.rpc<any>('get_session', { session_id: sessionId })).session, residentAudio: null, notices: ['Time was up before that turn arrived.'] };
   }
-  return continueResident(p, user, committed.session, input.idempotencyKey, notices);
+  events?.rep?.(committed.session);
+  return continueResident(p, user, committed.session, input.idempotencyKey, notices, events);
 }
 
 /** Produces (or resumes) the resident reply for a committed rep turn. Safe to call again with the same request ID. */
-async function continueResident(p: Providers, user: AuthUser, session: PracticeSession, requestId: string, notices: string[]): Promise<TurnResponse> {
+async function continueResident(p: Providers, user: AuthUser, session: PracticeSession, requestId: string, notices: string[], events?: TurnEvents): Promise<TurnResponse> {
   const svc = getDb().service();
   const db = getDb().user(user.accessToken, user.id);
   const last = session.turns.at(-1);
@@ -118,11 +174,14 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
     ?? { key: session.scenarioKey, version: 1, title: session.scenarioTitle ?? session.scenarioKey, persona: 'A customer', opener: session.turns[0]?.text ?? '', objection: 'Not stated', goal: 'Have a short, respectful conversation.', allowedEnding: 'A courteous ending.', behaviour: 'Polite and brief.', skill: 'General' };
   const campaign = ctxData.campaign?.pack as CampaignPack;
   let reply: { utterance: string; endConversation: boolean; reason: string | null };
+  const voice = events ? new SentenceVoice(p, session.id, requestId, notices, events) : null;
   try {
     const opId = `resident:${session.id}:${requestId}`;
+    const ctxIn = { scenario, drillKey: session.drillKey, campaign, transcript, repliesLeft: limitsOfSession(session).maxRepTurns - transcript.filter((t) => t.speaker === 'rep').length, operationId: opId };
     reply = await metered(p, { sessionId: session.id, operationId: opId, operation: 'resident', model: p.resident.model, sizeHint: JSON.stringify(transcript).length },
-      () => p.resident.reply({ scenario, drillKey: session.drillKey, campaign, transcript, repliesLeft: limitsOfSession(session).maxRepTurns - transcript.filter((t) => t.speaker === 'rep').length, operationId: opId }));
+      () => (voice && p.resident.replyStream ? p.resident.replyStream(ctxIn, (soFar) => voice.feed(soFar)) : p.resident.reply(ctxIn)));
   } catch (e) {
+    voice?.cancel();
     // Documented policy (ARCHITECTURE.md): a resident outage stops practice and refunds the session's allowance.
     // Uncertain attempts are recorded, never silently reissued.
     if (e instanceof ApiError && e.code === 'operation_in_progress') throw e;
@@ -134,6 +193,13 @@ async function continueResident(p: Providers, user: AuthUser, session: PracticeS
   }
   const utterance = reply.utterance.slice(0, LIMITS.residentUtteranceMaxChars);
   const after = await svc.rpc<PracticeSession>('commit_resident_turn', { session_id: session.id, request_id: requestId, text: utterance, end: reply.endConversation, end_reason: 'resident_ended', source: p.kind === 'mock' ? 'scripted' : 'generated' });
+  if (voice) {
+    // Streaming: the rest of the reply is voiced (including a goodbye line), sentence by sentence.
+    events!.partial?.(utterance);
+    await voice.finish(utterance);
+    if (after.status !== 'active') await runEvaluationJob(session.id).catch(() => undefined);
+    return { session: await refreshed(db, after), residentAudio: null, notices, streamed: true };
+  }
   let residentAudio = null;
   if (after.status === 'active') residentAudio = await speak(p, session.id, utterance, `tts:${session.id}:${requestId}`, notices);
   else await runEvaluationJob(session.id).catch(() => undefined);

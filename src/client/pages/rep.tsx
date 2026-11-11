@@ -12,6 +12,7 @@ import { Link, useNavigate } from '../router.tsx';
 import { Empty, ErrorBox, FictionalTag, Loading, StatusTag, fmtDate, fmtMinutes, sessionTitle } from '../components/ui.tsx';
 import { FeedbackView } from '../components/FeedbackView.tsx';
 import { Transcript } from '../components/Transcript.tsx';
+import { RepTasksCard } from './tasks.tsx';
 
 export { HomePage } from './landing.tsx';
 
@@ -46,6 +47,7 @@ export function PracticePage() {
         {ctx.practicePaused && <div className="alert warn" role="status">{ctx.practicePaused}</div>}
         {remaining !== null && <span className="time-pill" aria-label="Team practice time remaining">Team time left <strong>{fmtMinutes(Math.max(0, remaining))}</strong></span>}
       </div>
+      <RepTasksCard />
       <div className="card rules-card">
         <div className="row"><span className="tag teal">{CHANNEL_INFO[ctx.campaign.salesContext.channel].label}</span>{ctx.campaign.fictional && <FictionalTag />}<span className="tag">Version {ctx.campaign.version}</span></div>
         <h2 style={{ marginTop: '0.5rem' }}>{ctx.campaign.name}</h2>

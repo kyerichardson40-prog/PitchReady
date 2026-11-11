@@ -1,3 +1,4 @@
+import type { NewTask } from '../../../lib/domain/tasks.ts';
 import { limitsOfSession, practiceMinutesOf } from '../../../lib/domain/limits.ts';
 import { salesContextOf } from '../../../lib/domain/sales.ts';
 import * as E from '../../../lib/demo/engine.ts';
@@ -256,6 +257,9 @@ export class DemoRepository implements Repository {
   setScenarioArchived(key: string, archived: boolean) { return this.run((s) => { E.setScenarioArchived(s, key, archived); }); }
   setScenarioAssignments(userId: string, keys: string[]) { return this.run((s) => { E.setAssignments(s, userId, keys); }); }
   getRepProfile(userId: string) { return this.run((s) => E.repProfile(s, userId)); }
+  listTasks(opts: { includeArchived?: boolean } = {}) { return this.run((s) => E.listTasks(s, opts.includeArchived)); }
+  createTask(input: NewTask) { return this.run((s) => E.createTask(s, input)); }
+  archiveTask(id: string) { return this.run((s) => { E.archiveTask(s, id); }); }
   demoSignIn(userId: string) { return this.run((s) => { E.signIn(s, userId); }); }
   demoSignOut() { return this.run((s) => { E.signOut(s); }); }
 
