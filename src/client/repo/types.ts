@@ -36,6 +36,8 @@ export interface AppContextData {
   isOwner?: boolean;
   /** Site-wide message from the owner. */
   announcement?: { text: string; tone: 'info' | 'warn' } | null;
+  /** First-time questions: done (answered or skipped), and the answers. */
+  onboarding?: { done: boolean; skipped?: boolean; role?: 'rep' | 'manager' | null; struggles?: string[]; goals?: string[] };
   /** Set when the owner has paused practice: the message to show. */
   practicePaused?: string | null;
   voice: { stt: boolean; tts: boolean; deviceVoice: boolean };

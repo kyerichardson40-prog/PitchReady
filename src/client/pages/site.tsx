@@ -653,6 +653,7 @@ export function PrivacyPage() {
             <li><strong>Practice:</strong> what you type, the text of what you say, the AI customer’s replies, feedback and scores, reports you send about feedback, and managers’ review notes and corrections.</li>
             <li><strong>Voice:</strong> when you choose to speak, your recording is sent to our speech-to-text provider to turn it into text. PitchReady does not store the recording, and our provider is told not to use it to improve its models.</li>
             <li><strong>Usage:</strong> practice minutes used and the cost of each AI request, kept as totals for billing and fair-use limits.</li>
+            <li><strong>Welcome questions:</strong> if you answer them when you join, what you (or your team) find hard and what you want help with. We use this to suggest practice and improve PitchReady. A rep’s answers can be seen by their team’s managers. You can skip these questions.</li>
           </ul>
           <p>We use this to provide the practice and feedback, let managers coach their team, keep the service secure, and manage plans and limits. Our lawful basis is that it is necessary to provide the service the business has asked for (and our legitimate interest in running it securely).</p>
           <h3>Cookies and technical data</h3>

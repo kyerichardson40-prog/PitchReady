@@ -4,6 +4,8 @@ import { useApp, useAsync } from '../app-context.tsx';
 import { Link, useLocation, useNavigate } from '../router.tsx';
 import { ownerApi } from '../repo/api-repo.ts';
 import { Empty, ErrorBox, Loading, fmtDate } from '../components/ui.tsx';
+import { AnswerCounts, AnswerQuotes, type Answer } from '../components/Answers.tsx';
+import { onboardingLabel } from '../../../lib/content/onboarding.ts';
 
 /* ------------------------------------------------------------------ types (from /api/owner) */
 interface Period { id: string; startsAt: string; endsAt: string; allowanceSeconds: number; consumedSeconds: number; reservedSeconds: number; spendMinor: number }
@@ -29,7 +31,7 @@ interface Overview {
 interface Message { id: string; name: string; email: string; company: string | null; teamSize: string | null; salesType: string | null; message: string; status: string; createdAt: string }
 interface Activity { at: string; action: string; actor: string; team: string | null; targetType: string | null; metadata: Record<string, unknown> }
 
-const TABS = [['overview', 'Overview'], ['teams', 'Teams'], ['users', 'Users'], ['features', 'Features'], ['messages', 'Messages'], ['activity', 'Activity']] as const;
+const TABS = [['overview', 'Overview'], ['teams', 'Teams'], ['users', 'Users'], ['answers', 'Answers'], ['features', 'Features'], ['messages', 'Messages'], ['activity', 'Activity']] as const;
 type Tab = (typeof TABS)[number][0];
 
 const mins = (s: number) => `${Math.round(s / 60).toLocaleString('en-GB')} min`;
@@ -86,6 +88,7 @@ export function OwnerPage() {
       {tab === 'overview' && <OverviewTab go={go} />}
       {tab === 'teams' && (teamId ? <TeamDetailView id={teamId} back={() => go('teams')} /> : <TeamsTab open={(id) => go('teams', { team: id })} />)}
       {tab === 'users' && <UsersTab openTeam={(id) => go('teams', { team: id })} />}
+      {tab === 'answers' && <AnswersTab />}
       {tab === 'features' && <FeaturesTab />}
       {tab === 'messages' && <MessagesTab />}
       {tab === 'activity' && <ActivityTab />}
@@ -424,6 +427,48 @@ function UsersTab({ openTeam }: { openTeam: (id: string) => void }) {
           </table>
           {(q.data?.length ?? 0) >= 500 && <p className="small muted">Showing the newest 500. Search to find others.</p>}
         </div>
+      )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ welcome answers */
+function AnswersTab() {
+  const q = useAsync(() => ownerApi.view<{ answered: number; skipped: number; responses: Answer[] }>('onboarding'), []);
+  const [who, setWho] = useState<'manager' | 'rep'>('manager');
+  if (q.loading && !q.data) return <Loading />;
+  if (q.error) return <ErrorBox message={q.error} onRetry={q.reload} />;
+  const d = q.data!;
+  const people = d.responses.filter((r) => r.role === who);
+  return (
+    <>
+      <p className="muted m0">What new people told us when they created their account: {d.answered} answered, {d.skipped} skipped.</p>
+      <div className="row" role="group" aria-label="Show answers from">
+        <button className={`btn ${who === 'manager' ? 'primary' : ''}`} aria-pressed={who === 'manager'} onClick={() => setWho('manager')}>Managers ({d.responses.filter((r) => r.role === 'manager').length})</button>
+        <button className={`btn ${who === 'rep' ? 'primary' : ''}`} aria-pressed={who === 'rep'} onClick={() => setWho('rep')}>Reps ({d.responses.filter((r) => r.role === 'rep').length})</button>
+      </div>
+      {people.length === 0 ? <Empty>No answers from {who === 'manager' ? 'managers' : 'reps'} yet.</Empty> : (
+        <>
+          <div className="card owner-grid">
+            <AnswerCounts answers={people} role={who} kind="struggles" title={who === 'manager' ? 'Their team struggles with' : 'Find hardest'} />
+            <AnswerCounts answers={people} role={who} kind="goals" title="Want help with" />
+          </div>
+          <div className="card"><AnswerQuotes answers={people} limit={20} who={(a) => `${a.name ?? a.email}${a.team ? ` · ${a.team}` : ''}`} /></div>
+          <div className="card table-wrap">
+            <h2>Everyone</h2>
+            <table className="rtable">
+              <thead><tr><th>Person</th><th>Struggles</th><th>Wants help with</th><th>When</th></tr></thead>
+              <tbody>{people.map((a, i) => (
+                <tr key={i}>
+                  <td className="rt-main"><strong>{a.name ?? a.email}</strong><div className="small muted">{a.email}{a.team ? ` · ${a.team}` : ' · no team yet'}</div></td>
+                  <td data-label="Struggles" className="small">{a.struggles.map((k) => onboardingLabel(a.role, 'struggles', k)).join(', ') || '–'}</td>
+                  <td data-label="Wants help with" className="small">{a.goals.map((k) => onboardingLabel(a.role, 'goals', k)).join(', ') || '–'}</td>
+                  <td data-label="When" className="small">{fmtDate(a.at)}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </>
       )}
     </>
   );

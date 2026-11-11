@@ -18,6 +18,13 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 const post = <T>(path: string, data?: unknown) => call<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) });
 
+/** First-time questions (connected mode only). */
+export const onboardingApi = {
+  save: (data: { role: 'rep' | 'manager'; struggles: string[]; strugglesOther?: string; goals: string[]; goalsOther?: string; skipped?: boolean }) => post<{ done: true }>('/api/onboarding', data),
+  team: () => call<TeamAnswer[]>('/api/onboarding'),
+};
+export interface TeamAnswer { name: string; role: 'rep' | 'manager'; struggles: string[]; strugglesOther: string | null; goals: string[]; goalsOther: string | null; at: string }
+
 /** Owner suite calls (connected mode only; the server checks the caller is the owner). */
 export const ownerApi = {
   view: <T>(view: string, params: Record<string, string> = {}) => call<T>(`/api/owner?${new URLSearchParams({ view, ...params })}`),

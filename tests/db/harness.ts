@@ -40,9 +40,14 @@ export interface Fixture {
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 
-export async function createUser(url: string, email: string, confirmed = true): Promise<string> {
+/**
+ * A local test account. By default it has already been through the welcome questions (like the
+ * accounts that existed before onboarding); pass `onboarded: false` for a brand-new person.
+ */
+export async function createUser(url: string, email: string, confirmed = true, opts: { onboarded?: boolean } = {}): Promise<string> {
   const id = randomUUID();
   await psql(url, `insert into auth.users(id, email, email_confirmed_at) values ('${id}', ${q(email)}, ${confirmed ? 'now()' : 'null'})`);
+  if (opts.onboarded !== false) await psql(url, `insert into public.onboarding_answers(user_id, skipped) values ('${id}', true) on conflict do nothing`);
   return id;
 }
 

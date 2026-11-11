@@ -6,6 +6,7 @@ import type { FeedbackReport, PracticeSession } from '../../../lib/domain/types.
 import { computeProgress, sessionScore } from '../../../lib/domain/progress.ts';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 import { auth } from '../repo/api-repo.ts';
+import { suggestedScenarios } from '../../../lib/content/onboarding.ts';
 import { useApp, useAsync } from '../app-context.tsx';
 import { Link, useNavigate } from '../router.tsx';
 import { Empty, ErrorBox, FictionalTag, Loading, StatusTag, fmtDate, fmtMinutes, sessionTitle } from '../components/ui.tsx';
@@ -17,6 +18,7 @@ export { HomePage } from './landing.tsx';
 export function PracticePage() {
   const { repo, ctx, ctxError, refresh } = useApp();
   const history = useAsync(() => repo.listMySessions(), [repo, ctx?.user?.id]);
+  const suggested = suggestedScenarios(ctx?.onboarding?.struggles);
   if (ctxError) return <ErrorBox message={ctxError} onRetry={refresh} />;
   if (!ctx) return <Loading />;
   if (repo.mode === 'connected' && ctx.user && ctx.hasTeam === false) {
@@ -73,12 +75,14 @@ export function PracticePage() {
       {remaining !== null && remaining < (ctx.campaign?.practiceMinutes ?? 3) * 60 && <div className="alert warn">Not enough team allowance left to start a full {ctx.campaign?.practiceMinutes ?? 3}-minute session. Speak to your manager.</div>}
       {history.data && <ProgressCard sessions={history.data} />}
       <h2>Choose a scenario</h2>
+      {suggested.size > 0 && <p className="small muted">Suggested scenarios work on what you said you find hardest. <Link to="/welcome">Change your answers</Link></p>}
       <ul className="door-list">
-        {ctx.scenarios.map((s, i) => (
+        {[...ctx.scenarios].sort((a, b) => Number(suggested.has(b.key)) - Number(suggested.has(a.key))).map((s, i) => (
           <li key={s.key}>
             <Link to={`/practice/${s.key}`} className={`door-card paint-${i % 4}`}>
               <span className="door-ico" aria-hidden="true"><span className="door-ico-light" /><span className="door-ico-leaf"><span className="door-ico-plate">{i + 1}</span></span></span>
               <span className="door-card-body">
+                {suggested.has(s.key) && <span className="suggested-tag">Suggested for you</span>}
                 <strong className="door-card-title">{s.title}</strong>
                 <span className="door-card-quote">“{s.opener}”</span>
                 <span className="door-card-skill">Practises: {s.skill}</span>

@@ -868,3 +868,28 @@ button.owner-stat:hover { filter: brightness(1.07); }
 .owner-messages { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
 .owner-msg { white-space: pre-wrap; background: var(--surface-2); padding: 0.8rem 1rem; border-radius: 12px; }
 .owner select { min-width: 7.5rem; }
+
+/* Welcome questions. */
+.welcome h1 { font-size: clamp(1.5rem, 4.5vw, 2rem); line-height: 1.15; margin-bottom: 0.5rem; }
+.welcome-step { margin: 0; font-weight: 700; color: var(--paint-teal); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; }
+.welcome-roles { display: grid; gap: 0.8rem; margin-top: 1rem; }
+.welcome-role { display: flex; flex-direction: column; gap: 0.3rem; text-align: left; padding: 1.1rem 1.2rem; border: 2px solid var(--line); border-radius: 16px; background: #fff; font: inherit; color: var(--ink); cursor: pointer; }
+.welcome-role strong { font-size: 1.15rem; }
+.welcome-role span { color: var(--ink-2); }
+.welcome-role:hover, .welcome-role:focus-visible { border-color: var(--ink); box-shadow: 4px 4px 0 var(--paint-mustard); }
+.chips { display: flex; flex-wrap: wrap; gap: 0.55rem; margin: 1rem 0 1.25rem; }
+.chip { min-height: 44px; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 1rem; border: 2px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+.chip:hover { border-color: var(--ink); }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip-tick { display: inline-flex; width: 1.2rem; justify-content: center; font-weight: 800; }
+.suggested-tag { display: inline-block; margin-bottom: 0.3rem; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; background: var(--paint-mustard); color: var(--ink); border-radius: 999px; padding: 0.15rem 0.55rem; }
+
+/* Welcome answers (manager overview, owner suite). */
+.answer-counts h3, .answer-quotes h3 { font-size: 1rem; margin: 0 0 0.6rem; }
+.answer-counts ul, .answer-quotes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.answer-counts li { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(60px, 1fr) 2ch; align-items: center; gap: 0.6rem; font-size: 0.92rem; }
+.answer-bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.answer-bar span { display: block; height: 100%; background: var(--paint-cobalt); border-radius: 999px; }
+.answer-n { font-weight: 800; text-align: right; }
+.answer-quotes blockquote { margin: 0 0 0.15rem; font-style: italic; }
+.answer-quotes li { border-left: 3px solid var(--paint-mustard); padding-left: 0.75rem; }

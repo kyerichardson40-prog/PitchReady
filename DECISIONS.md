@@ -125,3 +125,7 @@ Visitors (not signed in) see the site's pages behind a **Menu** button in the he
 - **Features** (`public.site_settings`): pause all practice (enforced by a database trigger on new sessions, with a custom message), voice on/off, free pilots on/off with size and daily limit, site-wide announcement. The Railway `SELF_SERVE_PILOTS=false` still overrides.
 - **Messages:** contact-form inbox with reply by email and replied/closed/spam.
 - **Activity:** the audit log.
+
+## D40 — Welcome questions for new people (11 Nov 2026)
+After someone creates their account, their first visit to a signed-in page goes to `/welcome` (once; "Skip for now" also counts). Two questions, as tappable choices plus "anything else": what they (reps) or their team (managers) are struggling with, and what they want PitchReady to help with. People with no team are first asked whether they run a team or are a rep; team-runners then go on to start a pilot. Options and labels live in `lib/content/onboarding.ts`; answers are stored as keys in `public.onboarding_answers` (no client access; functions `my_onboarding`, `save_onboarding`, `team_onboarding` for managers, `owner_onboarding` service-only). Accounts that existed before this were marked as done, so only new people are asked.
+Answers are used: reps see "Suggested for you" on scenarios that work on what they find hard (via the built-in scenario keys); managers see "What your reps told us" on their overview; the owner suite has an Answers tab. Rep answers are visible to their managers (said on the screen and in the privacy notice).

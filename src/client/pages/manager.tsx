@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { DEMO_RUBRIC } from '../../../lib/content/rubric.ts';
 import { PRACTICE_MINUTES, practiceMinutesOf, type PracticeMinutes } from '../../../lib/domain/limits.ts';
 import { MIN_SAMPLE, type WeekTrend } from '../../../lib/domain/metrics.ts';
+import { onboardingApi } from '../repo/api-repo.ts';
+import { AnswerCounts, AnswerQuotes } from '../components/Answers.tsx';
 import { campaignPackSchema, rubricDimensionsSchema } from '../../../lib/domain/schemas.ts';
 import type { CampaignPack, ManagerReview, RubricVersion } from '../../../lib/domain/types.ts';
 import { newKey, useApp, useAsync } from '../app-context.tsx';
@@ -51,6 +53,7 @@ export function ManagerOverviewPage() {
             <p className="small muted" style={{ marginTop: '0.5rem' }}>Practice pauses when the pooled allowance runs out. In-progress sessions hold a reservation until they end.</p>
           </div>
           <TrendCard trend={o.trend ?? []} />
+          <TeamAnswersCard />
           <div className="card">
             <h2>Skill breakdown · rubric {o.rubricVersion}</h2>
             <p className="small muted">Means use observed scores only. “Not observed” is never counted as zero. Fewer than {MIN_SAMPLE} observations is shown as not enough data.</p>
@@ -151,6 +154,25 @@ export function ManagerRepsPage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** What the team said when they joined: what they find hard and what they want help with. */
+function TeamAnswersCard() {
+  const { repo } = useApp();
+  const q = useAsync(() => (repo.mode === 'connected' ? onboardingApi.team() : Promise.resolve([])), [repo]);
+  const reps = (q.data ?? []).filter((a) => a.role === 'rep');
+  if (!q.data || reps.length === 0) return null;
+  return (
+    <div className="card">
+      <h2>What your reps told us</h2>
+      <p className="small muted">When they joined, {reps.length} rep{reps.length === 1 ? '' : 's'} said what they find hardest and what they want help with. Use it to choose scenarios to assign.</p>
+      <div className="owner-grid">
+        <AnswerCounts answers={reps} role="rep" kind="struggles" title="Find hardest" />
+        <AnswerCounts answers={reps} role="rep" kind="goals" title="Want help with" />
+      </div>
+      <AnswerQuotes answers={reps} who={(a) => a.name ?? 'Rep'} />
     </div>
   );
 }

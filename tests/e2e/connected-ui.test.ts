@@ -6,7 +6,8 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium, type Browser } from 'playwright';
-import { dropDatabase, freshDatabase, seedTwoAgencies, type Fixture } from '../db/harness.ts';
+import { createUser, dropDatabase, freshDatabase, seedTwoAgencies, type Fixture } from '../db/harness.ts';
+import { psql } from '../../server/db.ts';
 import { startServer } from './helpers.ts';
 
 let f: Fixture;
@@ -184,4 +185,45 @@ test('owner suite: only the owner can open it; features, teams, users, messages'
   await page.getByText('Changed practice time').first().waitFor();
   assert.deepEqual(errors, []);
   await ctx.close();
+});
+
+test('welcome questions: a new rep is asked once, sees suggested practice, and their manager sees the answers', async () => {
+  const id = await createUser(f.url, 'new.rep@test.invalid', true, { onboarded: false });
+  await psql(f.url, `insert into public.memberships(agency_id, user_id, role) values ('${f.A.agency}', '${id}', 'rep'); insert into public.profiles(user_id, display_name) values ('${id}', 'Nia New')`);
+  const { page, ctx, errors } = await as(id);
+  await page.goto(srv.url + '/practice');
+  await page.waitForURL(/\/welcome\?next=%2Fpractice/);
+  await page.getByRole('heading', { name: 'What do you find hardest?' }).waitFor();
+  await page.getByRole('button', { name: /Handling objections/ }).click();
+  assert.equal(await page.getByRole('button', { name: /Handling objections/ }).getAttribute('aria-pressed'), 'true');
+  await page.getByLabel('Anything else? (optional)').fill('I go blank on price questions');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('heading', { name: 'What do you want PitchReady to help you with?' }).waitFor();
+  await page.getByRole('button', { name: /Feel more confident/ }).click();
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await page.waitForURL(/\/practice$/);
+  await page.getByText('Suggested for you').first().waitFor();
+  // Asked once only.
+  await page.goto(srv.url + '/history');
+  await page.getByRole('heading', { name: 'Your practice history' }).waitFor();
+  assert.deepEqual(errors, []);
+  await ctx.close();
+
+  const m = await as(f.A.manager);
+  await m.page.setViewportSize({ width: 1280, height: 900 });
+  await m.page.goto(srv.url + '/manager');
+  await m.page.getByRole('heading', { name: 'What your reps told us' }).waitFor();
+  await m.page.getByText('I go blank on price questions').waitFor();
+  await m.ctx.close();
+
+  // Someone with no team is asked how they'll use PitchReady first.
+  const solo = await createUser(f.url, 'solo@test.invalid', true, { onboarded: false });
+  const s = await as(solo);
+  await s.page.goto(srv.url + '/practice');
+  await s.page.getByRole('heading', { name: /How will you use PitchReady\?/ }).waitFor();
+  await s.page.getByRole('button', { name: /I run a sales team/ }).click();
+  await s.page.getByRole('heading', { name: 'What is your team struggling with?' }).waitFor();
+  await s.page.getByRole('button', { name: 'Skip for now' }).click();
+  await s.page.waitForURL(/\/(start|practice)$/);
+  await s.ctx.close();
 });

@@ -26,6 +26,7 @@ export const GET = ownerOnly(async (req) => {
     case 'team': return svc().rpc('owner_team_detail', { agency_id: uuid.parse(q.get('id')) });
     case 'users': return svc().rpc('owner_list_users', { q: (q.get('q') ?? '').slice(0, 100) });
     case 'messages': return svc().rpc('owner_list_messages', { status: z.enum(['open', 'all', 'new', 'replied', 'closed', 'spam']).catch('open').parse(q.get('status')) });
+    case 'onboarding': return svc().rpc('owner_onboarding', {});
     case 'activity': return svc().rpc('owner_activity', { owner_only: q.get('ownerOnly') === '1' ? 'true' : 'false' });
     case 'settings': return {
       settings: await svc().rpc('site_settings', {}),

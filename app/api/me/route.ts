@@ -27,7 +27,12 @@ export const GET = open(async (req, { rid }) => {
     auth.setCookies.forEach((c) => res.headers.append('set-cookie', c));
     return res;
   }
-  const c: any = await getDb().user(auth.user.accessToken, auth.user.id).rpc('my_context');
+  const db = getDb().user(auth.user.accessToken, auth.user.id);
+  const [c, onboarding]: any[] = await Promise.all([
+    db.rpc('my_context'),
+    // Before the onboarding migration is applied, nobody is asked.
+    db.rpc('my_onboarding', {}).catch(() => ({ done: true })),
+  ]);
   const m = c?.membership;
   const res = json({
     ...base,
@@ -48,6 +53,7 @@ export const GET = open(async (req, { rid }) => {
     hasTeam: !!m,
     canStartPilot: !m && pilotsOpen,
     isOwner: isOwner(auth.user),
+    onboarding,
     emailConfirmed: auth.user.emailConfirmed,
   }, { requestId: rid });
   auth.setCookies.forEach((x) => res.headers.append('set-cookie', x));
