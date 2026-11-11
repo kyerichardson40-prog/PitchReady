@@ -15,7 +15,7 @@ let browser: Browser;
 
 before(async () => {
   f = await seedTwoAgencies(await freshDatabase());
-  srv = await startServer({ APP_MODE: 'connected', PITCHREADY_TEST_DB_URL: f.url, AI_PROVIDER: 'mock', AI_BUDGET_CURRENCY: 'GBP', MAINTENANCE_SECRET: 'x'.repeat(40) }, 3241);
+  srv = await startServer({ APP_MODE: 'connected', PITCHREADY_TEST_DB_URL: f.url, AI_PROVIDER: 'mock', AI_BUDGET_CURRENCY: 'GBP', MAINTENANCE_SECRET: 'x'.repeat(40), OWNER_EMAILS: 'Manager.B@test.invalid' }, 3241);
   browser = await chromium.launch({ headless: true, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 });
 after(async () => { await browser?.close(); srv?.proc.kill(); if (f) await dropDatabase(f.url); });
@@ -133,4 +133,55 @@ test('settings: change your name; the sign-in page offers a password reset; a pe
   await p2.getByRole('button', { name: 'Send reset link' }).click();
   await p2.getByText(/we’ve sent a link to reset the password/).waitFor();
   await anon.close();
+});
+
+test('owner suite: only the owner can open it; features, teams, users, messages', async () => {
+  // Anyone else gets "not found", and the API refuses them too.
+  const other = await as(f.A.manager);
+  await other.page.goto(srv.url + '/owner');
+  await other.page.getByRole('heading', { name: 'Page not found' }).waitFor();
+  const denied = await other.page.evaluate(async () => (await fetch('/api/owner?view=overview')).status);
+  assert.equal(denied, 404);
+  await other.ctx.close();
+
+  const { page, ctx, errors } = await as(f.B.manager);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(srv.url + '/manager');
+  await page.getByRole('link', { name: 'Owner' }).click();
+  await page.getByRole('heading', { name: 'Owner suite' }).waitFor();
+  await page.getByText(/active teams/).waitFor();
+
+  // Features: announcement shows on every page; pausing blocks practice for reps.
+  await page.getByRole('navigation', { name: 'Owner suite' }).getByRole('link', { name: 'Features' }).click();
+  await page.getByLabel('Message', { exact: true }).fill('New scenarios are live.');
+  await page.getByRole('button', { name: 'Save' }).last().click();
+  await page.getByText('Announcement is live.').waitFor();
+  await page.getByRole('region', { name: 'Announcement' }).getByText('New scenarios are live.').waitFor();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Pause practice for everyone' }).click();
+  await page.getByText('Practice paused.').waitFor();
+  const rep = await as(f.A.rep1);
+  await rep.page.goto(srv.url + '/practice');
+  await rep.page.getByText(/Practice is paused/).first().waitFor();
+  await rep.ctx.close();
+  await page.getByRole('button', { name: 'Turn practice back on' }).click();
+  await page.getByText('Practice is back on.').waitFor();
+
+  // Teams: open a team, add practice time.
+  await page.getByRole('navigation', { name: 'Owner suite' }).getByRole('link', { name: 'Teams' }).click();
+  await page.getByRole('button', { name: /^Agency A/ }).click();
+  await page.getByRole('heading', { name: 'Practice time' }).waitFor();
+  await page.getByLabel('Minutes', { exact: true }).fill('30');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await page.getByText('Added 30 minutes.').waitFor();
+
+  // Users: search and see their team.
+  await page.getByRole('navigation', { name: 'Owner suite' }).getByRole('link', { name: 'Users' }).click();
+  await page.getByLabel('Search people').fill('rep2.a');
+  await page.getByText('rep2.a@test.invalid').waitFor();
+
+  await page.getByRole('navigation', { name: 'Owner suite' }).getByRole('link', { name: 'Activity' }).click();
+  await page.getByText('Changed practice time').first().waitFor();
+  assert.deepEqual(errors, []);
+  await ctx.close();
 });

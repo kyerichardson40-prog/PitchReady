@@ -30,6 +30,14 @@ export interface AppContextData {
   emailConfirmed?: boolean;
   /** Free pilots can be started by anyone who signs up (connected mode). */
   pilotsOpen?: boolean;
+  /** Size of a free pilot (owner setting). */
+  pilot?: { minutes: number; days: number };
+  /** Signed in as the site owner (OWNER_EMAILS). */
+  isOwner?: boolean;
+  /** Site-wide message from the owner. */
+  announcement?: { text: string; tone: 'info' | 'warn' } | null;
+  /** Set when the owner has paused practice: the message to show. */
+  practicePaused?: string | null;
   voice: { stt: boolean; tts: boolean; deviceVoice: boolean };
   liveAi: boolean;
   demoPeople?: { id: string; name: string; email: string; role: 'manager' | 'rep'; active: boolean }[];

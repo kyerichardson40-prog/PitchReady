@@ -7,7 +7,7 @@ do $$ begin
 end $$;
 create schema if not exists auth;
 create schema if not exists extensions;
-create table if not exists auth.users (id uuid primary key, email text not null, email_confirmed_at timestamptz);
+create table if not exists auth.users (id uuid primary key, email text not null, email_confirmed_at timestamptz, created_at timestamptz default now(), last_sign_in_at timestamptz);
 -- Same definition shape as Supabase's auth.uid().
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(coalesce(current_setting('request.jwt.claim.sub', true), (current_setting('request.jwt.claims', true)::jsonb ->> 'sub')), '')::uuid

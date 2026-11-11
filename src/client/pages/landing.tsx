@@ -276,7 +276,7 @@ export function HomePage() {
               <h3>Free pilot</h3>
               <p className="lp-plan-price">£0</p>
               <ul>
-                <li>60 minutes of practice over 14 days</li>
+                <li>{ctx?.pilot?.minutes ?? 60} minutes of practice over {ctx?.pilot?.days ?? 14} days</li>
                 <li>Up to 5 reps and unlimited managers</li>
                 <li>Your own rules, scenarios and feedback</li>
                 <li>No card needed. It never becomes a paid plan by itself.</li>

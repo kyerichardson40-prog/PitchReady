@@ -362,7 +362,7 @@ export function PricingPage() {
       <section className="site-section" aria-labelledby="price-pilot">
         <div className="lp-wrap lp-narrow">
           <h2 id="price-pilot" className="lp-h2">Not sure yet? Start with a free pilot</h2>
-          <p>Try PitchReady with up to 5 reps: 60 minutes of practice over 14 days, free. No card needed, and it never turns into a paid plan by itself.</p>
+          <p>Try PitchReady with up to 5 reps: {ctx?.pilot?.minutes ?? 60} minutes of practice over {ctx?.pilot?.days ?? 14} days, free. No card needed, and it never turns into a paid plan by itself.</p>
           {pilotOpen && <Link to={`/login?signup=1&next=${encodeURIComponent('/start')}`} className="lp-btn lp-btn-main">Start a free pilot</Link>}
         </div>
       </section>

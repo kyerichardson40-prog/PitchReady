@@ -18,6 +18,12 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 const post = <T>(path: string, data?: unknown) => call<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) });
 
+/** Owner suite calls (connected mode only; the server checks the caller is the owner). */
+export const ownerApi = {
+  view: <T>(view: string, params: Record<string, string> = {}) => call<T>(`/api/owner?${new URLSearchParams({ view, ...params })}`),
+  act: <T = unknown>(action: string, data: Record<string, unknown> = {}) => post<T>('/api/owner', { action, ...data }),
+};
+
 /** Connected-mode repository: every call goes through authenticated server routes. */
 export class ApiRepository implements Repository {
   readonly mode = 'connected' as const;

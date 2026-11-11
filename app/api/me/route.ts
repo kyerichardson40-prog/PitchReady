@@ -7,12 +7,21 @@ import { getConfig } from '../../../server/config.ts';
 import { json, readJson } from '../../../server/http.ts';
 import { authed } from '../../../server/guard.ts';
 import { z } from 'zod';
+import { siteSettings } from '../../../server/site-settings.ts';
+import { isOwner } from '../../../server/owner.ts';
 
 /** Context for the signed-in user (or user: null). Server-side only data; no secrets. */
 export const GET = open(async (req, { rid }) => {
   const auth = await authenticate(req);
   const cfg = getConfig();
-  const base = { mode: 'connected', voice: { stt: cfg.voice.stt, tts: cfg.voice.tts, deviceVoice: false }, liveAi: cfg.liveAi, scenarios: [], pilotsOpen: cfg.env.SELF_SERVE_PILOTS === 'true' };
+  const site = await siteSettings();
+  const pilotsOpen = cfg.env.SELF_SERVE_PILOTS === 'true' && site.pilotsEnabled;
+  const base = {
+    mode: 'connected', voice: { stt: cfg.voice.stt && site.voiceEnabled, tts: cfg.voice.tts && site.voiceEnabled, deviceVoice: false }, liveAi: cfg.liveAi, scenarios: [], pilotsOpen,
+    announcement: site.announcement ? { text: site.announcement, tone: site.announcementTone } : null,
+    practicePaused: site.practicePaused ? (site.practicePausedMessage || 'Practice is paused for a short while. Please try again later.') : null,
+    pilot: { minutes: Math.round(site.pilotSeconds / 60), days: site.pilotDays },
+  };
   if (!auth.user) {
     const res = json({ ...base, user: null, membershipActive: false, agencyName: null, campaign: null, rubricVersion: null, usage: null, retentionDays: null, emailNotifications: null, hasTeam: false, canStartPilot: false }, { requestId: rid });
     auth.setCookies.forEach((c) => res.headers.append('set-cookie', c));
@@ -37,7 +46,8 @@ export const GET = open(async (req, { rid }) => {
     retentionDays: c?.agency?.retentionDays ?? null,
     emailNotifications: c?.agency?.emailNotifications ?? null,
     hasTeam: !!m,
-    canStartPilot: !m && cfg.env.SELF_SERVE_PILOTS === 'true',
+    canStartPilot: !m && pilotsOpen,
+    isOwner: isOwner(auth.user),
     emailConfirmed: auth.user.emailConfirmed,
   }, { requestId: rid });
   auth.setCookies.forEach((x) => res.headers.append('set-cookie', x));

@@ -33,14 +33,15 @@ function readCookie(req: Request, name: string): string | null {
   return null;
 }
 
-async function gotrue(path: string, init: RequestInit & { bearer?: string } = {}): Promise<{ status: number; body: any }> {
+async function gotrue(path: string, init: RequestInit & { bearer?: string; admin?: boolean } = {}): Promise<{ status: number; body: any }> {
   const { env } = getConfig();
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 10_000);
   try {
     const res = await fetch(`${env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\/$/, '')}/auth/v1${path}`, {
       ...init, signal: ctl.signal,
-      headers: { apikey: env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, 'content-type': 'application/json', ...(init.bearer ? { authorization: `Bearer ${init.bearer}` } : {}) },
+      headers: { apikey: init.admin ? env.SUPABASE_SECRET_KEY! : env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, 'content-type': 'application/json',
+        ...(init.admin ? { authorization: `Bearer ${env.SUPABASE_SECRET_KEY!}` } : init.bearer ? { authorization: `Bearer ${init.bearer}` } : {}) },
     });
     const text = await res.text();
     return { status: res.status, body: text ? JSON.parse(text) : null };
@@ -132,6 +133,14 @@ export async function changePassword(user: AuthUser, newPassword: string, curren
   if (r.status === 422 && /same|different/i.test(JSON.stringify(r.body))) throw new ApiError(400, 'same_password', 'Choose a password you haven’t used here before.');
   if (r.status === 422) throw new ApiError(400, 'weak_password', 'That password isn’t strong enough. Try a longer one.');
   if (r.status >= 400) throw new ApiError(400, 'password_change_failed', 'Could not change the password. Sign in again and retry.');
+}
+
+/** Owner suite: delete a sign-in account outright (Supabase admin API, server-only secret key). */
+export async function adminDeleteUser(userId: string): Promise<void> {
+  if (testMode()) return;
+  const r = await gotrue(`/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', admin: true });
+  if (r.status === 404) throw new ApiError(404, 'not_found', 'That account no longer exists.');
+  if (r.status >= 400) throw new ApiError(502, 'delete_failed', 'Supabase could not delete that account. Try again, or delete it in the Supabase dashboard.');
 }
 
 export async function adoptSession(accessToken: string, refreshToken: string): Promise<string[]> {

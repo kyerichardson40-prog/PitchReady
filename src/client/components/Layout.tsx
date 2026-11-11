@@ -45,6 +45,9 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+      {ctx?.announcement && (
+        <div className={`announce announce-${ctx.announcement.tone}`} role="region" aria-label="Announcement"><p>{ctx.announcement.text}</p></div>
+      )}
       <header className="topbar">
         <div className="topbar-inner">
           <Link to={role === 'manager' ? '/manager' : role ? '/practice' : '/'} className="brand">PitchReady<small>{repo.mode === 'demo' ? 'demo' : 'pilot'}</small></Link>
@@ -52,6 +55,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {!role && <SiteMenu pathname={pathname} />}
           {links.length > 0 && <nav className="nav" aria-label="Main">
             {links.map(([href, label]) => <Link key={href} to={href} current={isCurrent(href)}>{label}</Link>)}
+            {ctx?.isOwner && <Link to="/owner" current={pathname === '/owner'}>Owner</Link>}
             {repo.mode === 'connected' && ctx?.user && (
               <button className="btn link" onClick={async () => { await auth.signOut().catch(() => {}); await refresh(); navigate('/login?signedOut=1'); }}>Sign out</button>
             )}

@@ -39,6 +39,8 @@ const envSchema = z.object({
   AI_BUDGET_CURRENCY: optional,
   PROVIDER_RATE_CARD_PATH: optional,
   MAINTENANCE_SECRET: optional,
+  /** Site owner(s) who can open the owner suite (comma-separated emails). */
+  OWNER_EMAILS: optional,
   /** Free pilots that people start themselves. Off with SELF_SERVE_PILOTS=false. */
   SELF_SERVE_PILOTS: z.enum(['true', 'false']).default('true'),
   SELF_SERVE_PILOT_SECONDS: intOpt,

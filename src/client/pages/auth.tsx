@@ -112,7 +112,7 @@ export function StartPilotPage() {
   return (
     <div className="stack narrow">
       <h1>Start a free pilot</h1>
-      <p>Create your team and try PitchReady with up to 5 reps. You get 60 minutes of practice over 14 days, free. No card needed, and it never turns into a paid plan by itself.</p>
+      <p>Create your team and try PitchReady with up to 5 reps. You get {ctx.pilot?.minutes ?? 60} minutes of practice over {ctx.pilot?.days ?? 14} days, free. No card needed, and it never turns into a paid plan by itself.</p>
       {err && <ErrorBox message={err} />}
       <form className="card" onSubmit={async (e) => {
         e.preventDefault(); setBusy(true); setErr(null);

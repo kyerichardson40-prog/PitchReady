@@ -116,3 +116,12 @@ Migration 000900 is backwards compatible (new columns with defaults, new functio
 
 ## D38 — Menu button and Pricing page (9 Nov 2026)
 Visitors (not signed in) see the site's pages behind a **Menu** button in the header (How it works, Pricing, About us, Contact us), next to Sign in, instead of a row of links. The panel closes on choosing a page, Escape (focus back to the button) or a tap outside. Signed-in reps and managers keep their app tabs. New `/pricing` page: plans are based on the size of the business (reps, practice minutes, kind of selling), three team sizes each with "Get a price" → contact page, what every plan includes, and the free pilot. No prices are shown. Pricing is also in the footer and sitemap.
+
+## D39 — Owner suite (11 Nov 2026)
+`/owner`, for the site owner only: the emails in `OWNER_EMAILS` (Railway variable, comma-separated), signed in with a confirmed email. Everyone else gets "not found" from the page and a 404 from `/api/owner`. Owner database functions (`app_api.owner_*`, migration 20261111000100) are service-role only, so they can't be reached with a user's own token; each change is audit-logged with the owner as actor.
+- **Overview:** teams, accounts, sessions, minutes, pilots, AI cost this period, live sessions, 14-day chart, run housekeeping now.
+- **Teams:** list with practice time left, renewal, people and activity; create a team for any email (made manager now if they have an account, otherwise invited) from any starter template; per team: add/take away minutes or start a new period, name, seats, retention, renewal, manager emails, people (role, access on/off, password reset, remove if no history), invitations, periods with AI cost, activity, suspend/reactivate (ends live practice), delete for good (type the name).
+- **Users:** everyone with their team; search; access on/off; password reset; delete an account with no team (Supabase admin API, type the email).
+- **Features** (`public.site_settings`): pause all practice (enforced by a database trigger on new sessions, with a custom message), voice on/off, free pilots on/off with size and daily limit, site-wide announcement. The Railway `SELF_SERVE_PILOTS=false` still overrides.
+- **Messages:** contact-form inbox with reply by email and replied/closed/spam.
+- **Activity:** the audit log.

@@ -1,4 +1,5 @@
 import { getScenario } from '../../lib/content/scenarios.ts';
+import { siteSettings } from '../site-settings.ts';
 import { LIMITS, limitsOfSession, normaliseAudioMime } from '../../lib/domain/limits.ts';
 import { residentDirective } from '../../lib/domain/session-rules.ts';
 import { transcriptAtRevision } from '../../lib/domain/transcript.ts';
@@ -20,7 +21,7 @@ function requireProviders(): Providers {
 }
 
 async function speak(p: Providers, sessionId: string, text: string, opId: string, notices: string[]) {
-  if (!p.tts || !text) return null;
+  if (!p.tts || !text || !(await siteSettings()).voiceEnabled) return null;
   try {
     const out = await metered(p, { sessionId, operationId: opId, operation: 'tts', model: p.tts.model, sizeHint: text.length }, () => p.tts!.speak({ text, operationId: opId }));
     return { base64: Buffer.from(out.audio).toString('base64'), mimeType: out.mimeType };
@@ -58,7 +59,7 @@ export async function submitTurn(user: AuthUser, sessionId: string, input:
   let source: 'typed' | 'transcribed' = 'typed';
 
   if (input.kind === 'audio') {
-    if (!p.stt) throw new ApiError(503, 'voice_unavailable', 'Voice is not configured; please type your reply.');
+    if (!p.stt || !(await siteSettings()).voiceEnabled) throw new ApiError(503, 'voice_unavailable', 'Voice is switched off at the moment; please type your reply.');
     const mime = normaliseAudioMime(input.mimeType);
     if (!mime) throw new ApiError(415, 'unsupported_audio', 'This recording format is not supported. Please type your reply.');
     if (input.audio.byteLength > LIMITS.audioMaxBytes) throw new ApiError(413, 'audio_too_large', 'That recording is too large. Record a shorter turn (under 30 seconds) or type it.');

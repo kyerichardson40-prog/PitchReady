@@ -24,7 +24,7 @@ export function PracticePage() {
       <div className="stack narrow">
         <h1>You’re not in a team yet</h1>
         {ctx.canStartPilot
-          ? <div className="card"><h2>Setting up your own team?</h2><p>Start a free pilot: 60 minutes of practice over 14 days for up to 5 reps.</p><Link className="btn primary" to="/start">Start a free pilot</Link></div>
+          ? <div className="card"><h2>Setting up your own team?</h2><p>Start a free pilot: {ctx.pilot?.minutes ?? 60} minutes of practice over {ctx.pilot?.days ?? 14} days for up to 5 reps.</p><Link className="btn primary" to="/start">Start a free pilot</Link></div>
           : <p>New teams are set up by arrangement. <Link to="/contact">Contact us</Link> to get started.</p>}
         <div className="card"><h2>Joining your manager’s team?</h2><p>Open the invitation link they sent you. It only works with the email address it was sent to ({ctx.user.email}).</p></div>
       </div>
@@ -41,6 +41,7 @@ export function PracticePage() {
     <div className="stack">
       <div className="page-head">
         <h1>Practise</h1>
+        {ctx.practicePaused && <div className="alert warn" role="status">{ctx.practicePaused}</div>}
         {remaining !== null && <span className="time-pill" aria-label="Team practice time remaining">Team time left <strong>{fmtMinutes(Math.max(0, remaining))}</strong></span>}
       </div>
       <div className="card rules-card">
