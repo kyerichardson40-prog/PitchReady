@@ -96,7 +96,8 @@ export async function signUp(email: string, password: string, terms?: { version:
   // The terms version and time are stored in the new user's metadata as the record of acceptance.
   const data = terms ? { terms_version: terms.version, terms_accepted_at: terms.acceptedAt } : undefined;
   const r = await gotrue(`/signup?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email, password, ...(data ? { data } : {}) }) });
-  if (r.status === 429) throw new ApiError(429, 'rate_limited', 'Too many attempts. Please wait and try again.');
+  // Supabase answers 429 both for repeated attempts and when its email sending limit is reached.
+  if (r.status === 429) throw new ApiError(429, 'rate_limited', 'We couldn’t send your confirmation email just now. Please try again in a few minutes.');
   if (r.status >= 400) throw new ApiError(400, 'signup_failed', 'Could not create the account. If you already have one, sign in instead.');
   if (r.body?.access_token) return { confirmationRequired: false, cookies: sessionCookies(r.body.access_token, r.body.refresh_token) };
   return { confirmationRequired: true, cookies: [] };
@@ -107,7 +108,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (testMode()) return;
   const redirect = `${getConfig().env.APP_BASE_URL}/login`;
   const r = await gotrue(`/recover?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email }) });
-  if (r.status === 429) throw new ApiError(429, 'rate_limited', 'Too many attempts. Please wait a few minutes and try again.');
+  if (r.status === 429) throw new ApiError(429, 'rate_limited', 'We couldn’t send the reset email just now. Please try again in a few minutes.');
 }
 
 /** True when this (already verified) access token came from a password-reset link in the last 30 minutes. */
