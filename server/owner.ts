@@ -9,7 +9,11 @@ import type { AuthUser } from './auth.ts';
  * are never reachable with a user's own token.
  */
 export function ownerEmails(env: { OWNER_EMAILS?: string } = getConfig().env): string[] {
-  return (env.OWNER_EMAILS ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  // Forgiving about how the value was typed in the host's settings: quotes, spaces, semicolons, a
+  // "Name <email>" form or a trailing newline all still work.
+  return (env.OWNER_EMAILS ?? '').split(/[,;\s]+/)
+    .map((s) => s.replace(/^["'<(]+|["'>)]+$/g, '').trim().toLowerCase())
+    .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
 }
 
 export function isOwner(user: Pick<AuthUser, 'email' | 'emailConfirmed'> | null | undefined, env?: { OWNER_EMAILS?: string }): boolean {

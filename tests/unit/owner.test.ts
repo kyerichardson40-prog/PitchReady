@@ -25,3 +25,10 @@ test('owner-created teams can start from any kind of selling, keeping the built-
   assert.equal(p.scenarios[0]!.title, t.scenarios[0]!.title);
   assert.deepEqual(bootstrapPayload({ agencyName: 'A', managerEmail: 'a@x.invalid' }).scenarios, SCENARIOS);
 });
+
+test('OWNER_EMAILS is read forgivingly: quotes, spaces, semicolons, Name <email>, newlines', () => {
+  for (const v of ['"kye@example.com"', "'kye@example.com'", ' kye@example.com\n', 'Kye <Kye@Example.com>', 'kye@example.com; other@example.com', '"kye@example.com, other@example.com"']) {
+    assert.ok(ownerEmails({ OWNER_EMAILS: v }).includes('kye@example.com'), v);
+  }
+  assert.deepEqual(ownerEmails({ OWNER_EMAILS: 'not-an-email' }), []);
+});
