@@ -98,6 +98,8 @@ export async function signUp(email: string, password: string, terms?: { version:
   const r = await gotrue(`/signup?redirect_to=${encodeURIComponent(redirect)}`, { method: 'POST', body: JSON.stringify({ email, password, ...(data ? { data } : {}) }) });
   // Supabase answers 429 both for repeated attempts and when its email sending limit is reached.
   if (r.status === 429) throw new ApiError(429, 'rate_limited', 'We couldn’t send your confirmation email just now. Please try again in a few minutes.');
+  // 5xx from Supabase here is nearly always the confirmation email failing to send (e.g. email settings).
+  if (r.status >= 500) throw new ApiError(503, 'email_unavailable', 'We couldn’t send your confirmation email just now, so your account wasn’t created. Please try again in a few minutes, or contact us.');
   if (r.status >= 400) throw new ApiError(400, 'signup_failed', 'Could not create the account. If you already have one, sign in instead.');
   if (r.body?.access_token) return { confirmationRequired: false, cookies: sessionCookies(r.body.access_token, r.body.refresh_token) };
   return { confirmationRequired: true, cookies: [] };
