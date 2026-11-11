@@ -9,9 +9,18 @@ export async function demoSignIn(page: Page, start: string, role: 'rep' | 'manag
   await signInFromPicker(page, role, name);
 }
 
+/** Opens the header Menu (if it isn't open) and chooses a page, or "Sign out". */
+export async function menu(page: Page, item: string) {
+  const btn = page.getByRole('button', { name: 'Menu', exact: true });
+  if ((await btn.getAttribute('aria-expanded')) !== 'true') await btn.click();
+  const panel = page.getByRole('navigation', { name: 'Menu' });
+  if (item === 'Sign out') await panel.getByRole('button', { name: /^Sign out/ }).click();
+  else await panel.getByRole('link', { name: item, exact: true }).click();
+}
+
 /** Signs out (back to the homepage) and signs in as someone else, without reloading. */
 export async function demoSwitch(page: Page, role: 'rep' | 'manager', name: string) {
-  await page.getByRole('button', { name: /^Sign out/ }).click();
+  await menu(page, 'Sign out');
   await signInFromPicker(page, role, name);
 }
 

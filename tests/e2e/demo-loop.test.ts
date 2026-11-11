@@ -2,7 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Browser, Page } from 'playwright';
 import { launch, startServer } from './helpers.ts';
-import { demoSignIn, demoSwitch } from './demo-helpers.ts';
+import { demoSignIn, demoSwitch, menu } from './demo-helpers.ts';
 import { SCENARIOS } from '../../lib/content/scenarios.ts';
 
 let browser: Browser;
@@ -77,7 +77,7 @@ test('demo: firm refusal with pressure is flagged; manager sees the flag and can
 
 test('demo: report error, history, settings reset, and rep cannot open manager pages', async () => {
   const page = await freshPage();
-  await page.getByRole('link', { name: 'History' }).click();
+  await menu(page, 'History');
   await page.getByRole('heading', { name: 'Your practice history' }).waitFor();
   const rows = await page.locator('tbody tr').count();
   assert.ok(rows >= 3, 'seeded history visible');
@@ -116,14 +116,14 @@ test('demo: pending evaluation seed can be completed; 375px layout has no horizo
 test('demo: manager publishes a new campaign version; older sessions keep v1', async () => {
   const page = await freshPage();
   await demoSwitch(page, 'manager', 'Riley');
-  await page.getByRole('link', { name: 'Rules & campaign' }).click();
+  await menu(page, 'Rules & campaign');
   await page.getByLabel('Campaign name').fill('Neighbourhood Meal Project — fictional demo (v2)');
   await page.getByRole('button', { name: 'Save draft' }).click();
   await page.getByText('Draft saved.').waitFor();
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Publish draft' }).click();
   await page.getByText('Published version 2.').waitFor();
-  await page.getByRole('link', { name: 'Overview' }).click();
+  await menu(page, 'Overview');
   await page.locator('.card', { hasText: 'Recent sessions' }).locator('tbody tr').first().getByRole('link').click();
   await page.getByText(/campaign v1/).waitFor();
   await page.context().close();

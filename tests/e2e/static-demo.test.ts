@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Browser, Page } from 'playwright';
 import { launch } from './helpers.ts';
 import { fakeClaudeScript } from './fake-claude.ts';
-import { demoSignIn, demoSwitch } from './demo-helpers.ts';
+import { demoSignIn, demoSwitch, menu } from './demo-helpers.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const file = pathToFileURL(join(root, 'dist/pitchready-demo.html')).href;
@@ -112,9 +112,9 @@ test('static demo, live AI refused: scripted resident with a notice, Live AI swi
 
 test('static demo: Back steps through screens (Android back button in the app shell)', async () => {
   const { page, errors } = await open();
-  await page.getByRole('link', { name: 'History' }).click();
+  await menu(page, 'History');
   await page.getByRole('heading', { name: 'Your practice history' }).waitFor();
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await menu(page, 'Settings');
   await page.goBack();
   await page.getByRole('heading', { name: 'Your practice history' }).waitFor();
   await page.goBack();

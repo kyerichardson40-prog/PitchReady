@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Browser, Page } from 'playwright';
 import { launch, startServer } from './helpers.ts';
-import { demoSignIn, demoSwitch } from './demo-helpers.ts';
+import { demoSignIn, demoSwitch, menu } from './demo-helpers.ts';
 
 let browser: Browser;
 let server: Awaited<ReturnType<typeof startServer>>;
@@ -57,7 +57,7 @@ test('the demo starts on the role picker; protected pages send you back to it; d
 test('manager writes a scenario and assigns only it to a rep; the rep sees and practises just that one', async () => {
   const { page, errors } = await fresh();
   await demoSignIn(page, server.url + '/', 'manager', 'Riley');
-  await page.getByRole('link', { name: 'Scenarios' }).click();
+  await menu(page, 'Scenarios');
   await page.getByRole('button', { name: 'New scenario' }).click();
   await page.getByLabel('Title').fill('Worried about money');
   await page.getByLabel('Who they are', { exact: true }).fill('Jamie, worried about bills');
@@ -71,7 +71,7 @@ test('manager writes a scenario and assigns only it to a rep; the rep sees and p
   await page.getByText('Scenario created.').waitFor();
   await page.getByRole('heading', { name: 'Worried about money' }).or(page.getByText('Worried about money', { exact: true })).first().waitFor();
 
-  await page.getByRole('link', { name: 'Team', exact: true }).click();
+  await menu(page, 'Team');
   await page.getByRole('link', { name: 'Priya (demo rep)' }).click();
   await page.getByRole('radio', { name: 'Only the scenarios I choose' }).check();
   await page.getByRole('checkbox', { name: /Worried about money/ }).check();
@@ -90,7 +90,7 @@ test('manager writes a scenario and assigns only it to a rep; the rep sees and p
 test('manager adds a never-say phrase and publishes; feedback flags it and shows the must-say checklist', async () => {
   const { page, errors } = await fresh();
   await demoSignIn(page, server.url + '/', 'manager', 'Riley');
-  await page.getByRole('link', { name: 'Rules & campaign' }).click();
+  await menu(page, 'Rules & campaign');
   const never = page.getByLabel('Never-say words and phrases (one per line)');
   await never.click();
   await never.press('End');
@@ -115,7 +115,7 @@ test('manager adds a never-say phrase and publishes; feedback flags it and shows
 test('rep database: search, profile statistics, and deactivation from the profile', async () => {
   const { page, errors } = await fresh();
   await demoSignIn(page, server.url + '/', 'manager', 'Riley');
-  await page.getByRole('link', { name: 'Team', exact: true }).click();
+  await menu(page, 'Team');
   await page.getByLabel('Search reps').fill('ais');
   const rows = page.locator('.card', { hasText: 'Rep database' }).locator('tbody tr');
   assert.equal(await rows.count(), 1);
@@ -134,7 +134,7 @@ test('rep database: search, profile statistics, and deactivation from the profil
 test('team data download: CSV and JSON of the team’s finished sessions', async () => {
   const { page, errors } = await fresh();
   await demoSignIn(page, server.url + '/', 'manager', 'Riley');
-  await page.getByRole('link', { name: 'Team', exact: true }).click();
+  await menu(page, 'Team');
   await page.getByRole('heading', { name: 'Download your team’s data' }).waitFor();
   const [csvDl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Spreadsheet (CSV)' }).click()]);
   assert.match(csvDl.suggestedFilename(), /^pitchready-.+\.csv$/);

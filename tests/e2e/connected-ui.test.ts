@@ -9,6 +9,7 @@ import { chromium, type Browser } from 'playwright';
 import { createUser, dropDatabase, freshDatabase, seedTwoAgencies, type Fixture } from '../db/harness.ts';
 import { psql } from '../../server/db.ts';
 import { startServer } from './helpers.ts';
+import { menu } from './demo-helpers.ts';
 
 let f: Fixture;
 let srv: Awaited<ReturnType<typeof startServer>>;
@@ -94,7 +95,7 @@ test('manager: overview, team invite link, flagged session review', async () => 
   await page.goto(srv.url + '/manager');
   await page.getByRole('heading', { name: 'Team overview' }).waitFor();
   await page.getByText(/active reps with a completed session/).waitFor();
-  await page.getByRole('link', { name: 'Team' }).click();
+  await menu(page, 'Team');
   await page.getByLabel('Email', { exact: true }).fill('ui.invitee@test.invalid');
   await page.getByRole('button', { name: 'Create invite link' }).click();
   await page.getByText(/\/invite\//).waitFor();
@@ -104,7 +105,7 @@ test('manager: overview, team invite link, flagged session review', async () => 
   await page.getByRole('button', { name: 'Save settings' }).click();
   await page.getByText('Settings saved.').waitFor();
   await page.getByText(/Sessions are deleted after 60 days/).waitFor();
-  await page.getByRole('link', { name: 'Overview' }).click();
+  await menu(page, 'Overview');
   const link = page.locator('.card', { hasText: 'Recent sessions' }).locator('tbody tr').first().getByRole('link');
   await link.click();
   await page.getByRole('heading', { name: 'Review notes' }).waitFor();
@@ -148,7 +149,7 @@ test('owner suite: only the owner can open it; features, teams, users, messages'
   const { page, ctx, errors } = await as(f.B.manager);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(srv.url + '/manager');
-  await page.getByRole('link', { name: 'Owner' }).click();
+  await menu(page, 'Owner');
   await page.getByRole('heading', { name: 'Owner suite' }).waitFor();
   await page.getByText(/active teams/).waitFor();
 

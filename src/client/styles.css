@@ -893,3 +893,10 @@ button.owner-stat:hover { filter: brightness(1.07); }
 .answer-n { font-weight: 800; text-align: right; }
 .answer-quotes blockquote { margin: 0 0 0.15rem; font-style: italic; }
 .answer-quotes li { border-left: 3px solid var(--paint-mustard); padding-left: 0.75rem; }
+/* Menu for signed-in people: who you are, and Sign out at the bottom. */
+.site-menu-who { margin: 0.25rem 0.9rem 0.5rem; font-size: 0.85rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.site-menu-signout { min-height: 48px; display: flex; align-items: center; padding: 0 0.9rem; margin-top: 0.35rem; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px;
+  background: none; color: var(--paint-red); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.site-menu-signout:hover { background: var(--pavement); }
+.topbar-inner:has(> .site-menu) { flex-wrap: nowrap; }
+.topbar-inner:has(> .site-menu) > .brand { margin-right: auto; }

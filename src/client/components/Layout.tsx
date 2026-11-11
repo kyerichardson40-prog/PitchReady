@@ -7,7 +7,7 @@ import { auth } from '../repo/api-repo.ts';
 const SITE_PAGES = new Set(['/', '/how-it-works', '/pricing', '/about', '/contact', '/terms', '/privacy', '/dpa']);
 
 /** The public site's pages, shown to visitors under the Menu button. */
-const SITE_MENU: [string, string][] = [['/how-it-works', 'How it works'], ['/pricing', 'Pricing'], ['/about', 'About us'], ['/contact', 'Contact us']];
+const SITE_MENU: [string, string][] = [['/', 'Home'], ['/how-it-works', 'How it works'], ['/pricing', 'Pricing'], ['/about', 'About us'], ['/contact', 'Contact us']];
 
 export function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -19,6 +19,11 @@ export function Layout({ children }: { children: ReactNode }) {
     : role === 'rep'
       ? [['/practice', 'Practise'], ['/history', 'History'], ['/settings', 'Settings']]
       : [];
+  // One Menu button everywhere: signed-in people get their app pages (and Owner), visitors the site's pages.
+  const menuLinks: [string, string][] = ctx?.user ? [...links, ...(ctx.isOwner ? [['/owner', 'Owner'] as [string, string]] : [])] : SITE_MENU;
+  const signOut = !ctx?.user ? null
+    : repo.mode === 'connected' ? async () => { await auth.signOut().catch(() => {}); await refresh(); navigate('/login?signedOut=1'); }
+    : async () => { await repo.demoSignOut!(); await refresh(); navigate('/'); };
   const isCurrent = (href: string) => pathname === href || (href !== '/manager' && pathname.startsWith(href + '/')) || (href === '/practice' && pathname.startsWith('/sessions/'));
 
   return (
@@ -52,17 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="topbar-inner">
           <Link to={role === 'manager' ? '/manager' : role ? '/practice' : '/'} className="brand">PitchReady<small>{repo.mode === 'demo' ? 'demo' : 'pilot'}</small></Link>
           {!ctx?.user && pathname !== '/login' && <Link to="/login" className="btn primary header-signin">Sign in</Link>}
-          {!role && <SiteMenu pathname={pathname} />}
-          {links.length > 0 && <nav className="nav" aria-label="Main">
-            {links.map(([href, label]) => <Link key={href} to={href} current={isCurrent(href)}>{label}</Link>)}
-            {ctx?.isOwner && <Link to="/owner" current={pathname === '/owner'}>Owner</Link>}
-            {repo.mode === 'connected' && ctx?.user && (
-              <button className="btn link" onClick={async () => { await auth.signOut().catch(() => {}); await refresh(); navigate('/login?signedOut=1'); }}>Sign out</button>
-            )}
-            {repo.mode === 'demo' && ctx?.user && (
-              <button className="btn link" aria-label={`Sign out (${ctx.user.name})`} onClick={async () => { await repo.demoSignOut!(); await refresh(); navigate('/'); }}>Sign out</button>
-            )}
-          </nav>}
+          <SiteMenu pathname={pathname} links={menuLinks} isCurrent={isCurrent} who={ctx?.user ? ctx.user.name || ctx.user.email : null} signOut={signOut} />
         </div>
       </header>
       <main id="main" tabIndex={-1} className={SITE_PAGES.has(pathname) ? 'main-wide' : undefined}>{children}</main>
@@ -71,10 +66,11 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 /**
- * Menu button for visitors: the site's pages open in a small panel instead of a row of links.
- * Closes on choosing a page, Escape (focus returns to the button), or a tap outside.
+ * The Menu button, the same on every page. Signed-in people see their pages (and Sign out);
+ * visitors see the site's pages. Closes on choosing an item, Escape (focus returns to the
+ * button), or a tap outside.
  */
-function SiteMenu({ pathname }: { pathname: string }) {
+function SiteMenu({ pathname, links, isCurrent, who, signOut }: { pathname: string; links: [string, string][]; isCurrent: (href: string) => boolean; who: string | null; signOut: (() => Promise<void>) | null }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -94,9 +90,11 @@ function SiteMenu({ pathname }: { pathname: string }) {
       </button>
       {open && (
         <nav id="site-menu-panel" className="site-menu-panel" aria-label="Menu">
-          {SITE_MENU.map(([href, label]) => (
-            <Link key={href} to={href} current={pathname === href}>{label}</Link>
+          {who && <p className="site-menu-who">Signed in as <strong>{who}</strong></p>}
+          {links.map(([href, label]) => (
+            <Link key={href} to={href} current={href === '/' ? pathname === '/' : isCurrent(href)}>{label}</Link>
           ))}
+          {signOut && <button type="button" className="site-menu-signout" aria-label={who ? `Sign out (${who})` : 'Sign out'} onClick={() => { setOpen(false); void signOut(); }}>Sign out</button>}
         </nav>
       )}
     </div>
