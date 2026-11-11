@@ -10,6 +10,7 @@ import { adminDeleteUser, requestPasswordReset } from '../../../server/auth.ts';
 import { emailConfigured, invitationEmail, sendEmail } from '../../../server/services/notify.ts';
 import { setCachedSiteSettings, type SiteSettings } from '../../../server/site-settings.ts';
 import { runMaintenance } from '../../../server/services/maintenance.ts';
+import { billingConfigured, checkCustomer, createCustomer, dashboardUrl } from '../../../server/services/billing.ts';
 
 /**
  * Owner suite API. GET ?view=… reads; POST { action, … } changes. Owner only (OWNER_EMAILS), and
@@ -27,6 +28,12 @@ export const GET = ownerOnly(async (req) => {
     case 'users': return svc().rpc('owner_list_users', { q: (q.get('q') ?? '').slice(0, 100) });
     case 'messages': return svc().rpc('owner_list_messages', { status: z.enum(['open', 'all', 'new', 'replied', 'closed', 'spam']).catch('open').parse(q.get('status')) });
     case 'onboarding': return svc().rpc('owner_onboarding', {});
+    case 'billing': {
+      const b = await svc().rpc<Record<string, any>>('owner_billing', { agency_id: uuid.parse(q.get('id')) });
+      return { ...b, available: billingConfigured(),
+        dashboardUrl: b?.customerId ? dashboardUrl(`customers/${b.customerId}`) : null,
+        subscriptionUrl: b?.subscriptionId ? dashboardUrl(`subscriptions/${b.subscriptionId}`) : null };
+    }
     case 'activity': return svc().rpc('owner_activity', { owner_only: q.get('ownerOnly') === '1' ? 'true' : 'false' });
     case 'settings': return {
       settings: await svc().rpc('site_settings', {}),
@@ -59,6 +66,7 @@ const action = z.discriminatedUnion('action', [
   z.object({ action: z.literal('deleteUser'), userId: uuid, confirmEmail: z.string().trim().toLowerCase().max(254) }).strict(),
   z.object({ action: z.literal('messageStatus'), id: uuid, status: z.enum(['new', 'replied', 'closed', 'spam']) }).strict(),
   z.object({ action: z.literal('runMaintenance') }).strict(),
+  z.object({ action: z.literal('linkBilling'), agencyId: uuid, create: z.boolean().optional(), customerId: z.string().trim().regex(/^cus_[A-Za-z0-9]+$/, 'A Stripe customer ID starts with cus_').nullable().optional() }).strict(),
 ]);
 
 export const POST = ownerOnly(async (req, { user }) => {
@@ -115,6 +123,19 @@ export const POST = ownerOnly(async (req, { user }) => {
     }
     case 'messageStatus':
       return svc().rpc('owner_set_message_status', { actor_id: actor, id: a.id, status: a.status });
+    case 'linkBilling': {
+      if (a.customerId === null) return svc().rpc('owner_link_billing', { actor_id: actor, agency_id: a.agencyId, customer_id: null });
+      if (!billingConfigured()) throw new ApiError(503, 'billing_unavailable', 'Add STRIPE_SECRET_KEY in Railway first.');
+      let customerId = a.customerId;
+      if (a.create) {
+        const t = await svc().rpc<{ name: string; members: { email: string; role: string; active: boolean }[] }>('owner_team_detail', { agency_id: a.agencyId });
+        const manager = t.members.find((m) => m.role === 'manager' && m.active);
+        customerId = await createCustomer({ id: a.agencyId, name: t.name, email: manager?.email ?? null });
+      } else if (customerId) {
+        await checkCustomer(customerId, a.agencyId);
+      } else throw new ApiError(400, 'invalid_input', 'Create a customer or give a Stripe customer ID.');
+      return svc().rpc('owner_link_billing', { actor_id: actor, agency_id: a.agencyId, customer_id: customerId });
+    }
     case 'runMaintenance':
       return runMaintenance();
   }

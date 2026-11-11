@@ -10,6 +10,7 @@ import { createUser, dropDatabase, freshDatabase, seedTwoAgencies, type Fixture 
 import { psql } from '../../server/db.ts';
 import { startServer } from './helpers.ts';
 import { menu } from './demo-helpers.ts';
+import Stripe from 'stripe';
 
 let f: Fixture;
 let srv: Awaited<ReturnType<typeof startServer>>;
@@ -17,7 +18,7 @@ let browser: Browser;
 
 before(async () => {
   f = await seedTwoAgencies(await freshDatabase());
-  srv = await startServer({ APP_MODE: 'connected', PITCHREADY_TEST_DB_URL: f.url, AI_PROVIDER: 'mock', AI_BUDGET_CURRENCY: 'GBP', MAINTENANCE_SECRET: 'x'.repeat(40), OWNER_EMAILS: 'Manager.B@test.invalid' }, 3241);
+  srv = await startServer({ APP_MODE: 'connected', PITCHREADY_TEST_DB_URL: f.url, AI_PROVIDER: 'mock', AI_BUDGET_CURRENCY: 'GBP', MAINTENANCE_SECRET: 'x'.repeat(40), OWNER_EMAILS: 'Manager.B@test.invalid', STRIPE_SECRET_KEY: 'rk_test_dummy', STRIPE_WEBHOOK_SECRET: 'whsec_e2e' }, 3241);
   browser = await chromium.launch({ headless: true, args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 });
 after(async () => { await browser?.close(); srv?.proc.kill(); if (f) await dropDatabase(f.url); });
@@ -278,4 +279,44 @@ test('practice tasks: manager sets one through the real routes; the rep sees it 
   assert.equal((await b.page.request.delete(`${srv.url}/api/tasks/${list[0].id}`, { headers: { origin: srv.url } })).status(), 404);
   assert.deepEqual([...m.errors, ...r.errors], []);
   await m.ctx.close(); await r.ctx.close(); await b.ctx.close();
+});
+
+test('billing: owner links a team; signed Stripe webhooks set practice time; the manager sees it; bad signatures are refused', async () => {
+  // Owner links team A to an existing Stripe customer ID (linking by ID checks Stripe, so do it in the database here).
+  await f.db.service().rpc('owner_link_billing', { actor_id: f.B.manager, agency_id: f.A.agency, customer_id: 'cus_E2E' });
+  const send = async (event: Record<string, unknown>, secret = 'whsec_e2e') => {
+    const body = JSON.stringify(event);
+    const sig = new Stripe('rk_test_dummy').webhooks.generateTestHeaderString({ payload: body, secret });
+    return fetch(srv.url + '/api/stripe/webhook', { method: 'POST', body, headers: { 'content-type': 'application/json', 'stripe-signature': sig } });
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const sub = { id: 'evt_e2e_1', type: 'customer.subscription.created', created: now, data: { object: { id: 'sub_E2E', object: 'subscription', customer: 'cus_E2E', status: 'active',
+    cancel_at_period_end: false, items: { data: [{ current_period_end: now + 30 * 86400 }] }, metadata: { practice_minutes: '450' } } } };
+  const bad = await send(sub, 'whsec_wrong');
+  assert.equal(bad.status, 400);
+  const ok = await send(sub);
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).outcome, 'allowance_set');
+  assert.equal(((await (await send(sub)).json())).outcome, 'duplicate');
+  const paid = await send({ id: 'evt_e2e_2', type: 'invoice.paid', created: now + 1, data: { object: { id: 'in_E2E', object: 'invoice', customer: 'cus_E2E', hosted_invoice_url: 'https://invoice.stripe.com/i/e2e',
+    billing_reason: 'subscription_create', parent: { subscription_details: { subscription: 'sub_E2E', metadata: { practice_minutes: '450' } } } } } });
+  assert.equal(paid.status, 200);
+
+  const m = await as(f.A.manager);
+  await m.page.goto(srv.url + '/manager');
+  await menu(m.page, 'Billing');
+  await m.page.getByRole('heading', { name: 'Your plan' }).waitFor();
+  await m.page.getByText('Active', { exact: true }).waitFor();
+  await m.page.getByText(/450 minutes/).waitFor();
+  await m.page.getByText(/Last invoice paid on/).waitFor();
+  const b = await (await m.page.request.get(srv.url + '/api/billing')).json();
+  assert.equal(b.customerId, undefined, 'Stripe IDs stay on the server');
+  // A team with no billing sees how to get a plan; reps can't open billing.
+  const other = await as(f.B.manager);
+  await other.page.goto(srv.url + '/manager/billing');
+  await other.page.getByRole('heading', { name: 'Billing isn’t set up for your team yet' }).waitFor();
+  const r = await as(f.A.rep1);
+  assert.equal((await r.page.request.get(srv.url + '/api/billing')).status(), 403);
+  assert.deepEqual([...m.errors, ...other.errors], []);
+  await m.ctx.close(); await other.ctx.close(); await r.ctx.close();
 });

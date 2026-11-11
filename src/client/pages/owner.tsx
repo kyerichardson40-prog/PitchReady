@@ -252,6 +252,7 @@ function TeamDetailView({ id, back }: { id: string; back: () => void }) {
         <PracticeTimeCard t={t} reload={q.reload} />
         <TeamSettingsCard t={t} reload={q.reload} />
       </div>
+      <BillingCard t={t} reload={q.reload} />
       <MembersCard t={t} reload={q.reload} />
       {t.invitations.length > 0 && (
         <div className="card table-wrap"><h2>Pending invitations</h2>
@@ -267,6 +268,57 @@ function TeamDetailView({ id, back }: { id: string; back: () => void }) {
       </div>
       <DangerCard t={t} back={back} reload={q.reload} />
     </>
+  );
+}
+
+interface OwnerBilling { linked: boolean; available: boolean; customerId?: string; status?: string | null; currentPeriodEnd?: string | null; cancelAtPeriodEnd?: boolean;
+  practiceMinutes?: number | null; lastInvoiceStatus?: string | null; lastPaidAt?: string | null; dashboardUrl?: string | null; subscriptionUrl?: string | null }
+const BILLING_STATUS: Record<string, string> = { active: 'Paying', trialing: 'Trial', past_due: 'Payment overdue (Stripe is retrying)', unpaid: 'Unpaid: renewals stopped',
+  canceled: 'Cancelled: renewals stopped', incomplete: 'Waiting for first payment', incomplete_expired: 'First payment never made', paused: 'Paused' };
+const INVOICE_STATUS: Record<string, string> = { paid: 'Paid', open: 'Sent, not paid yet', payment_failed: 'Payment failed', uncollectible: 'Marked uncollectible', void: 'Voided' };
+
+/** Billing (D45): link the team to its Stripe customer; Stripe's payments then keep practice time renewing. */
+function BillingCard({ t, reload }: { t: TeamDetail; reload: () => void }) {
+  const q = useAsync(() => ownerApi.view<OwnerBilling>('billing', { id: t.id }), [t.id]);
+  const a = useAction();
+  const [cus, setCus] = useState('');
+  const [sure, setSure] = useState(false);
+  const b = q.data;
+  const act = (data: Record<string, unknown>, done: string) => a.run(async () => { await ownerApi.act('linkBilling', { agencyId: t.id, ...data }); q.reload(); reload(); }, done);
+  return (
+    <div className="card">
+      <h2>Billing</h2>
+      {a.feedback}
+      {!b ? (q.error ? <ErrorBox message={q.error} onRetry={q.reload} /> : <Loading />) : !b.available && !b.linked ? (
+        <p className="small muted m0">Stripe isn’t connected yet. Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in Railway.</p>
+      ) : !b.linked ? (
+        <>
+          <p className="small">Not linked to Stripe. Create a Stripe customer for this team, then send them a quote or subscription in Stripe. Put <code>practice_minutes</code> (minutes per month) in the subscription’s metadata and PitchReady sets their practice time when they pay.</p>
+          <div className="row">
+            <button className="btn primary" disabled={a.busy} onClick={() => void act({ create: true }, 'Stripe customer created and linked.')}>Create Stripe customer</button>
+          </div>
+          <details className="mt-sm"><summary>Link an existing Stripe customer</summary>
+            <form className="row" onSubmit={(e) => { e.preventDefault(); void act({ customerId: cus.trim() }, 'Linked.'); }}>
+              <div className="field m0"><label htmlFor="bl-cus">Stripe customer ID</label><input id="bl-cus" placeholder="cus_…" value={cus} onChange={(e) => setCus(e.target.value)} pattern="cus_[A-Za-z0-9]+" required /></div>
+              <button className="btn" type="submit" disabled={a.busy}>Link</button>
+            </form>
+          </details>
+        </>
+      ) : (
+        <>
+          <p className="m0"><strong>{b.status ? (BILLING_STATUS[b.status] ?? b.status) : 'No subscription yet'}</strong>
+            {b.currentPeriodEnd && <span className="small muted"> · {b.cancelAtPeriodEnd ? 'ends' : 'renews'} {fmtDate(b.currentPeriodEnd)}</span>}</p>
+          <p className="small muted">{b.practiceMinutes ? `${b.practiceMinutes} practice minutes a month from Stripe` : 'No practice_minutes in the subscription metadata: practice time is set by hand above.'}
+            {b.lastInvoiceStatus && <> · Last invoice: {INVOICE_STATUS[b.lastInvoiceStatus] ?? b.lastInvoiceStatus}{b.lastPaidAt ? ` (paid ${fmtDate(b.lastPaidAt)})` : ''}</>}</p>
+          <div className="row">
+            {b.dashboardUrl && <a className="btn" href={b.dashboardUrl} target="_blank" rel="noreferrer">Open in Stripe</a>}
+            {b.subscriptionUrl && <a className="btn" href={b.subscriptionUrl} target="_blank" rel="noreferrer">Subscription</a>}
+            {!sure ? <button className="btn link" disabled={a.busy} onClick={() => setSure(true)}>Unlink</button>
+              : <><span className="small">Unlink? Nothing changes in Stripe.</span><button className="btn" disabled={a.busy} onClick={() => { setSure(false); void act({ customerId: null }, 'Unlinked.'); }}>Yes, unlink</button><button className="btn link" onClick={() => setSure(false)}>Cancel</button></>}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

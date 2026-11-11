@@ -68,6 +68,14 @@ export const onboardingApi = {
 };
 export interface TeamAnswer { name: string; role: 'rep' | 'manager'; struggles: string[]; strugglesOther: string | null; goals: string[]; goalsOther: string | null; at: string }
 
+/** Billing (D45, connected mode only). */
+export interface MyBilling { linked: boolean; available: boolean; status?: string | null; currentPeriodEnd?: string | null; cancelAtPeriodEnd?: boolean;
+  practiceMinutes?: number | null; lastInvoiceStatus?: string | null; lastInvoiceUrl?: string | null; lastPaidAt?: string | null }
+export const billingApi = {
+  get: () => call<MyBilling>('/api/billing'),
+  portal: () => post<{ url: string }>('/api/billing/portal'),
+};
+
 /** Owner suite calls (connected mode only; the server checks the caller is the owner). */
 export const ownerApi = {
   view: <T>(view: string, params: Record<string, string> = {}) => call<T>(`/api/owner?${new URLSearchParams({ view, ...params })}`),
