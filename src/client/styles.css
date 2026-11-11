@@ -972,3 +972,6 @@ button.owner-stat:hover { filter: brightness(1.07); }
 }
 /* Very narrow phones: the mark stands in for the name (still read out by screen readers). */
 @media (max-width: 359px) { .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+
+/* Owner visits (D47) */
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }

@@ -31,7 +31,7 @@ interface Overview {
 interface Message { id: string; name: string; email: string; company: string | null; teamSize: string | null; salesType: string | null; message: string; status: string; createdAt: string }
 interface Activity { at: string; action: string; actor: string; team: string | null; targetType: string | null; metadata: Record<string, unknown> }
 
-const TABS = [['overview', 'Overview'], ['teams', 'Teams'], ['users', 'Users'], ['answers', 'Answers'], ['features', 'Features'], ['messages', 'Messages'], ['activity', 'Activity']] as const;
+const TABS = [['overview', 'Overview'], ['visits', 'Visits'], ['teams', 'Teams'], ['users', 'Users'], ['answers', 'Answers'], ['features', 'Features'], ['messages', 'Messages'], ['activity', 'Activity']] as const;
 type Tab = (typeof TABS)[number][0];
 
 const mins = (s: number) => `${Math.round(s / 60).toLocaleString('en-GB')} min`;
@@ -86,6 +86,7 @@ export function OwnerPage() {
         {TABS.map(([k, l]) => <Link key={k} to={`/owner?tab=${k}`} current={tab === k}>{l}</Link>)}
       </nav>
       {tab === 'overview' && <OverviewTab go={go} />}
+      {tab === 'visits' && <VisitsTab />}
       {tab === 'teams' && (teamId ? <TeamDetailView id={teamId} back={() => go('teams')} /> : <TeamsTab open={(id) => go('teams', { team: id })} />)}
       {tab === 'users' && <UsersTab openTeam={(id) => go('teams', { team: id })} />}
       {tab === 'answers' && <AnswersTab />}
@@ -100,6 +101,63 @@ export function OwnerPage() {
 function Stat({ n, label: l, paint, onClick }: { n: ReactNode; label: string; paint: string; onClick?: () => void }) {
   const inner = <><span className="owner-stat-n">{n}</span><span className="owner-stat-l">{l}</span></>;
   return onClick ? <button type="button" className={`owner-stat paint-${paint}`} onClick={onClick}>{inner}</button> : <div className={`owner-stat paint-${paint}`}>{inner}</div>;
+}
+
+interface Visits { days: number; daily: { day: string; views: number; visits: number; signups: number }[];
+  pages: { path: string; views: number; visits: number }[]; sources: { source: string; visits: number }[]; pilots: number }
+const PAGE_NAMES: Record<string, string> = { '/': 'Home', '/how-it-works': 'How it works', '/pricing': 'Pricing', '/about': 'About us', '/contact': 'Contact us',
+  '/login': 'Sign in / sign up', '/terms': 'Terms', '/privacy': 'Privacy notice', '/dpa': 'Data processing agreement', '/start': 'Start a free pilot',
+  '/welcome': 'Welcome questions', '/practice': 'Practise (reps)', '/history': 'History (reps)', '/manager': 'Team overview (managers)', '/settings': 'Settings' };
+const pageName = (p: string) => PAGE_NAMES[p] ?? p;
+
+/** Site visits (D47): anonymous daily totals, no cookies. A visit = someone arriving at the site; page views include every page they open. */
+function VisitsTab() {
+  const [days, setDays] = useState(30);
+  const q = useAsync(() => ownerApi.view<Visits>('visits', { days: String(days) }), [days]);
+  const v = q.data;
+  const total = (k: 'views' | 'visits' | 'signups') => (v?.daily ?? []).reduce((n, d) => n + d[k], 0);
+  const max = Math.max(1, ...(v?.daily ?? []).map((d) => d.visits));
+  return (
+    <>
+      <div className="row">
+        {[7, 30, 90].map((d) => <button key={d} className={`btn${d === days ? ' primary' : ''}`} aria-pressed={d === days} onClick={() => setDays(d)}>Last {d} days</button>)}
+      </div>
+      {q.loading && !v ? <Loading /> : q.error ? <ErrorBox message={q.error} onRetry={q.reload} /> : v && (
+        <>
+          <div className="owner-stats">
+            <Stat paint="teal" n={total('visits')} label="visits (people arriving at the site)" />
+            <Stat paint="cobalt" n={total('views')} label="page views" />
+            <Stat paint="mustard" n={total('signups')} label="new accounts" />
+            <Stat paint="red" n={v.pilots} label="free pilots started" />
+          </div>
+          <div className="card">
+            <h2>Visits per day</h2>
+            <div className="owner-daily" role="img" aria-label={`Visits per day: ${v.daily.map((d) => d.visits).join(', ')}`}>
+              {v.daily.map((d) => <span key={d.day} title={`${fmtDate(d.day)}: ${d.visits} visits, ${d.views} page views, ${d.signups} new accounts`} style={{ height: `${Math.max(4, (d.visits / max) * 100)}%` }} />)}
+            </div>
+            <p className="small muted m0">Oldest on the left. Tap or hover a bar for that day. Counting started on 11 Nov 2026; your own browsing isn’t counted.</p>
+          </div>
+          <div className="owner-grid">
+            <div className="card">
+              <h2>Most viewed pages</h2>
+              {v.pages.length === 0 ? <Empty>No page views yet.</Empty> : (
+                <table><thead><tr><th>Page</th><th className="num">Views</th><th className="num">Visits started here</th></tr></thead>
+                  <tbody>{v.pages.map((p) => <tr key={p.path}><td>{pageName(p.path)}</td><td className="num">{p.views}</td><td className="num">{p.visits}</td></tr>)}</tbody></table>
+              )}
+            </div>
+            <div className="card">
+              <h2>Where visitors came from</h2>
+              {v.sources.length === 0 ? <Empty>No visits yet.</Empty> : (
+                <table><thead><tr><th>Source</th><th className="num">Visits</th></tr></thead>
+                  <tbody>{v.sources.map((s) => <tr key={s.source}><td>{s.source || 'Direct, typed in, or from an app'}</td><td className="num">{s.visits}</td></tr>)}</tbody></table>
+              )}
+              <p className="small muted">WhatsApp, email and many apps don’t say where a link was tapped, so those visits show as direct.</p>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
 }
 
 function OverviewTab({ go }: { go: (t: Tab) => void }) {

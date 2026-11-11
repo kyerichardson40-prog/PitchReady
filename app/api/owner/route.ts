@@ -28,6 +28,7 @@ export const GET = ownerOnly(async (req) => {
     case 'users': return svc().rpc('owner_list_users', { q: (q.get('q') ?? '').slice(0, 100) });
     case 'messages': return svc().rpc('owner_list_messages', { status: z.enum(['open', 'all', 'new', 'replied', 'closed', 'spam']).catch('open').parse(q.get('status')) });
     case 'onboarding': return svc().rpc('owner_onboarding', {});
+    case 'visits': return svc().rpc('owner_visits', { days: Math.min(365, Math.max(1, Number(q.get('days')) || 30)) });
     case 'billing': {
       const b = await svc().rpc<Record<string, any>>('owner_billing', { agency_id: uuid.parse(q.get('id')) });
       return { ...b, available: billingConfigured(),

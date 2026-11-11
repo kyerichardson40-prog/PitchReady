@@ -334,3 +334,33 @@ test('free pilots refuse temporary email addresses, with a clear message; a norm
   assert.equal(ok.status(), 200);
   await t.ctx.close();
 });
+
+test('site visits: pages ping the counter (not for the owner); counts are anonymous; the owner sees them in Visits', async () => {
+  const anon = await browser.newContext();
+  const page = await anon.newPage();
+  const pings: any[] = [];
+  page.on('request', (r) => { if (r.url().endsWith('/api/visit')) pings.push(JSON.parse(r.postData() ?? '{}')); });
+  await page.goto(srv.url + '/pricing');
+  await page.getByRole('heading', { level: 1 }).first().waitFor();
+  await page.waitForTimeout(500);
+  assert.equal(pings.length, 1);
+  assert.equal(pings[0].path, '/pricing'); assert.equal(pings[0].entry, true);
+  // The test browser is headless, so the server ignores it like any bot; a normal browser is counted.
+  const ua = { origin: srv.url, 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1' };
+  for (const [path, entry, referrer] of [['/', true, 'https://www.google.com/'], ['/pricing', false, undefined], ['/manager/reps/3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90', false, undefined]] as const) {
+    const r = await anon.request.post(srv.url + '/api/visit', { data: { path, entry, ...(referrer ? { referrer } : {}) }, headers: ua });
+    assert.equal((await r.json()).counted, true);
+  }
+  await anon.close();
+
+  const o = await as(f.B.manager); // the owner in this test server
+  const ownerPings: string[] = [];
+  o.page.on('request', (r) => { if (r.url().endsWith('/api/visit')) ownerPings.push(r.url()); });
+  await o.page.goto(srv.url + '/owner?tab=visits');
+  await o.page.getByRole('heading', { name: 'Visits per day' }).waitFor();
+  await o.page.getByRole('cell', { name: 'google.com' }).waitFor();
+  await o.page.getByRole('cell', { name: '/manager/reps/:id' }).waitFor();
+  assert.equal(ownerPings.length, 0, "the owner's own browsing isn't counted");
+  assert.deepEqual(o.errors, []);
+  await o.ctx.close();
+});

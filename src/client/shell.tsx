@@ -22,6 +22,10 @@ export interface BootConfig { mode: 'demo' | 'connected'; setupError?: string }
 /** Signed-in pages that don't wait for the welcome questions. */
 const NO_WELCOME = new Set(['/welcome', '/owner', '/settings']);
 
+/** True once this page load has counted its first page view (the visit's entry page). */
+let visitStarted = false;
+let lastCounted: string | null = null;
+
 const PUBLIC = new Set(['/', '/login', '/how-it-works', '/pricing', '/about', '/contact', '/terms', '/privacy', '/dpa']);
 
 function Gate({ setupError, children }: { setupError?: string; children: ReactNode }) {
@@ -50,6 +54,17 @@ function Gate({ setupError, children }: { setupError?: string; children: ReactNo
     lastPath.current = pathname;
     document.getElementById('main')?.focus({ preventScroll: true });
   }, [pathname]);
+  // Site visits (D47): one anonymous ping per page shown. Not in the demo, and not for the owner's own browsing.
+  const isOwner = !!ctx?.isOwner;
+  const ctxReady = !!ctx;
+  useEffect(() => {
+    if (!mounted || repo.mode !== 'connected' || !ctxReady || isOwner || lastCounted === pathname) return;
+    lastCounted = pathname;
+    const entry = !visitStarted;
+    visitStarted = true;
+    void fetch('/api/visit', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ path: pathname, referrer: entry ? document.referrer : undefined, entry }) }).catch(() => undefined);
+  }, [mounted, pathname, repo.mode, ctxReady, isOwner]);
   if (setupError) return <ErrorBox message={setupError} />;
   if (!mounted) return <Loading />;
   if (needsAuth && ctxError) return <ErrorBox message={ctxError} />;

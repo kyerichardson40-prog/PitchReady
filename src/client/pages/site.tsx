@@ -658,7 +658,7 @@ export function PrivacyPage() {
           </ul>
           <p>We use this to provide the practice and feedback, let managers coach their team, keep the service secure, and manage plans and limits. Our lawful basis is that it is necessary to provide the service the business has asked for (and our legitimate interest in running it securely).</p>
           <h3>Cookies and technical data</h3>
-          <p>We use two essential cookies to keep you signed in (for up to 7 and 30 days). We don’t use advertising or analytics cookies. Our servers briefly use your IP address to limit repeated attempts (for example, too many sign-ins), and our hosting provider may keep standard server logs for security.</p>
+          <p>We use two essential cookies to keep you signed in (for up to 7 and 30 days). We don’t use advertising or analytics cookies. To see how many people visit the site, we count how many times each page is viewed each day and which website linked here, without cookies and without keeping your IP address or anything else that identifies you. Our servers briefly use your IP address to limit repeated attempts (for example, too many sign-ins), and our hosting provider may keep standard server logs for security.</p>
 
           <h2>4. Who we share it with</h2>
           <p>We use trusted providers to run PitchReady. They process data only to provide their service to us:</p>
