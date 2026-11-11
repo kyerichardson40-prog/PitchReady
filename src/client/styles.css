@@ -962,3 +962,13 @@ button.owner-stat:hover { filter: brightness(1.07); }
   .task-inbox .todo-list li > .btn, .task-inbox .todo-list li > .tag { margin-left: calc(26px + 0.75rem); }
   .task-inbox .todo-list li > .btn { width: calc(100% - 26px - 0.75rem); }
 }
+
+/* Brand mark beside the name in the header */
+.brand-mark { width: auto; height: 32px; margin-right: 0.5rem; flex: none; }
+@media (max-width: 440px) {
+  .brand-mark { height: 26px; margin-right: 0.35rem; }
+  .topbar-inner:has(> .site-menu) > .brand { font-size: 0.98rem; letter-spacing: -0.02em; }
+  .topbar-inner:has(> .site-menu) { gap: 0.4rem; }
+}
+/* Very narrow phones: the mark stands in for the name (still read out by screen readers). */
+@media (max-width: 359px) { .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }

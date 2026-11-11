@@ -632,7 +632,7 @@ export function PrivacyPage() {
       <PageHero paint="teal" title="Privacy notice" lede="What information PitchReady collects, why, who it’s shared with, how long it’s kept, and your rights." />
       <section className="site-section" aria-label="Privacy notice">
         <div className="lp-wrap site-prose site-terms">
-          <p className="small muted">Last updated: 9 November 2026</p>
+          <p className="small muted">Last updated: 11 November 2026</p>
 
           <h2>1. Who we are</h2>
           <p>PitchReady is run by Kye Richardson trading as PitchReady (“we”, “us”), based in Kent, United Kingdom. You can contact us about anything in this notice through our <Link to="/contact">contact page</Link>.</p>
@@ -653,6 +653,7 @@ export function PrivacyPage() {
             <li><strong>Practice:</strong> what you type, the text of what you say, the AI customer’s replies, feedback and scores, reports you send about feedback, and managers’ review notes and corrections.</li>
             <li><strong>Voice:</strong> when you choose to speak, your recording is sent to our speech-to-text provider to turn it into text. PitchReady does not store the recording, and our provider is told not to use it to improve its models.</li>
             <li><strong>Usage:</strong> practice minutes used and the cost of each AI request, kept as totals for billing and fair-use limits.</li>
+            <li><strong>Billing (for teams on a paid plan):</strong> the name, email address and billing address of the person or business we invoice, and whether invoices are paid. Payments are handled by Stripe: card and bank details go straight to Stripe and PitchReady never sees them. PitchReady itself keeps only the plan’s status and whether the latest invoice is paid.</li>
             <li><strong>Welcome questions:</strong> if you answer them when you join, what you (or your team) find hard and what you want help with. We use this to suggest practice and improve PitchReady. A rep’s answers can be seen by their team’s managers. You can skip these questions.</li>
           </ul>
           <p>We use this to provide the practice and feedback, let managers coach their team, keep the service secure, and manage plans and limits. Our lawful basis is that it is necessary to provide the service the business has asked for (and our legitimate interest in running it securely).</p>
@@ -667,6 +668,7 @@ export function PrivacyPage() {
             <li><strong>Anthropic</strong>: the AI that plays the customer and writes feedback.</li>
             <li><strong>Deepgram</strong>: turning speech into text and reading the customer’s lines aloud.</li>
             <li><strong>Resend</strong>: sending emails, such as contact-form messages to us, team invitations, and alerts and weekly summaries to managers.</li>
+            <li><strong>Stripe</strong>: invoices, subscriptions and taking payments for paid plans. Stripe also uses payment information to prevent fraud and meet its legal duties as a payment provider.</li>
           </ul>
           <p>Some of these providers are based in, or may process data in, the United States. Where personal data leaves the UK, we rely on the safeguards UK data protection law requires. We never sell personal data, and we don’t use it for advertising.</p>
 
@@ -677,6 +679,7 @@ export function PrivacyPage() {
             <li><strong>Voice recordings:</strong> not kept by PitchReady.</li>
             <li><strong>Accounts:</strong> while the account is active, then deleted on request or when the team’s agreement ends. When you create an account we record which version of the terms you agreed to, and when.</li>
             <li><strong>Usage totals:</strong> kept for billing and accounting, without any practice text.</li>
+            <li><strong>Invoices and payment records:</strong> kept for as long as the law requires for tax and accounting, usually six years.</li>
           </ul>
 
           <h2>6. Keeping it safe</h2>

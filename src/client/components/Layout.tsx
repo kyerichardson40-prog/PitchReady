@@ -55,7 +55,7 @@ export function Layout({ children }: { children: ReactNode }) {
       )}
       <header className="topbar">
         <div className="topbar-inner">
-          <Link to={role === 'manager' ? '/manager' : role ? '/practice' : '/'} className="brand">PitchReady<small>{repo.mode === 'demo' ? 'demo' : 'pilot'}</small></Link>
+          <Link to={role === 'manager' ? '/manager' : role ? '/practice' : '/'} className="brand"><img className="brand-mark" src="/images/brand/mark.png" alt="" width={39} height={32} /><span className="brand-name">PitchReady</span><small>{repo.mode === 'demo' ? 'demo' : 'pilot'}</small></Link>
           {!ctx?.user && pathname !== '/login' && <Link to="/login" className="btn primary header-signin">Sign in</Link>}
           <SiteMenu pathname={pathname} links={menuLinks} isCurrent={isCurrent} who={ctx?.user ? ctx.user.name || ctx.user.email : null} signOut={signOut} />
         </div>
