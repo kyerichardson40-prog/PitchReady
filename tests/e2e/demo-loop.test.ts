@@ -65,8 +65,8 @@ test('demo: firm refusal with pressure is flagged; manager sees the flag and can
   await page.getByText('Possible ignored stop request').waitFor();
   await demoSwitch(page, 'manager', 'Riley');
   await page.waitForURL(/\/manager$/);
-  await page.getByRole('heading', { name: 'Flagged for review' }).waitFor();
-  const flagged = page.locator('li', { hasText: 'Firm refusal' }).getByRole('link').first();
+  await page.getByRole('heading', { name: 'Needs your attention' }).waitFor();
+  const flagged = page.locator('.todo-list li', { hasText: 'Firm refusal' }).getByRole('link', { name: 'Open' }).first();
   await flagged.click();
   await page.getByLabel('Note').fill('Talked through accepting the first no.');
   await page.getByLabel('Status').selectOption('resolved');
@@ -124,7 +124,7 @@ test('demo: manager publishes a new campaign version; older sessions keep v1', a
   await page.getByRole('button', { name: 'Publish draft' }).click();
   await page.getByText('Published version 2.').waitFor();
   await menu(page, 'Overview');
-  await page.locator('.card', { hasText: 'Recent sessions' }).locator('tbody tr').first().getByRole('link').click();
+  await page.locator('.card', { hasText: 'Latest practice' }).locator('tbody tr').first().getByRole('link').click();
   await page.getByText(/campaign v1/).waitFor();
   await page.context().close();
 });

@@ -70,7 +70,7 @@ test('static demo: firm refusal is flagged for the manager; reset restores the s
   await page.getByText('Possible ignored stop request').waitFor();
   await demoSwitch(page, 'manager', 'Riley');
   await page.getByRole('heading', { name: 'Team overview' }).waitFor();
-  await page.getByRole('heading', { name: 'Flagged for review' }).waitFor();
+  await page.getByRole('heading', { name: 'Needs your attention' }).waitFor();
   await page.getByRole('button', { name: 'Reset demo data' }).first().click();
   await page.getByRole('heading', { name: 'Practise the pitch before the real one.' }).waitFor();
   assert.deepEqual(errors, []);

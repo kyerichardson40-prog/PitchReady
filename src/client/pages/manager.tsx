@@ -21,74 +21,198 @@ import { collectTeamExport, downloadFile, exportFileName, teamExportCsv } from '
 
 const SAMPLE_LABELS = { sample_opening: 'Opening line', sample_explanation: 'Explaining the campaign', sample_unknown_answer: "When you don't know the answer", sample_disengagement: 'Leaving politely' } as const;
 
+/** Plain words for an average score out of 5. */
+function scoreWord(mean: number | null): { word: string; tone: 'good' | 'ok' | 'work' | 'none' } {
+  if (mean === null) return { word: 'Not enough practice yet', tone: 'none' };
+  if (mean >= 4) return { word: 'Strong', tone: 'good' };
+  if (mean >= 3) return { word: 'Getting there', tone: 'ok' };
+  return { word: 'Needs work', tone: 'work' };
+}
+
+const DAY = 86_400_000;
+const daysSince = (iso: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / DAY) : null);
+const whenText = (iso: string | null) => {
+  const d = daysSince(iso);
+  return d === null ? 'Never' : d === 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`;
+};
+
+type RepStatus = { label: string; tone: 'red' | 'amber' | 'teal' | ''; order: number };
+function repStatus(r: { completed: number; lastPracticeAt: string | null; openFlags: number }): RepStatus {
+  if (r.openFlags > 0) return { label: 'Needs your review', tone: 'red', order: 0 };
+  if (r.completed === 0) return { label: 'Hasn’t practised yet', tone: 'amber', order: 1 };
+  if ((daysSince(r.lastPracticeAt) ?? 99) > 7) return { label: 'Not practised this week', tone: 'amber', order: 2 };
+  return { label: 'On track', tone: 'teal', order: 3 };
+}
+
+const firstName = (n: string) => n.split(' ')[0] || n;
+const listNames = (names: string[]) => names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+
 export function ManagerOverviewPage() {
   const guard = useManagerGuard();
   const { repo, ctx } = useApp();
   const [days, setDays] = useState(14);
-  const ov = useAsync(() => (ctx?.user?.role === 'manager' ? repo.getOverview(days) : Promise.resolve(null)), [repo, days, ctx?.user?.id]);
-  const sessions = useAsync(() => (ctx?.user?.role === 'manager' ? repo.listTeamSessions() : Promise.resolve([])), [repo, ctx?.user?.id]);
+  const isManager = ctx?.user?.role === 'manager';
+  const ov = useAsync(() => (isManager ? repo.getOverview(days) : Promise.resolve(null)), [repo, days, ctx?.user?.id]);
+  const sessions = useAsync(() => (isManager ? repo.listTeamSessions() : Promise.resolve([])), [repo, ctx?.user?.id]);
+  const roster = useAsync(() => (isManager ? repo.getRoster() : Promise.resolve(null)), [repo, ctx?.user?.id]);
   if (guard) return guard;
   const o = ov.data;
   const flagged = (sessions.data ?? []).filter((s) => s.openConcerns + s.openReports > 0);
   const label = (k: string) => DEMO_RUBRIC.dimensions.find((d) => d.key === k)?.label ?? k;
+  const reps = (roster.data?.members ?? []).filter((m) => m.role === 'rep' && m.active)
+    .map((m) => ({ ...m, status: repStatus(m) }))
+    .sort((a, b) => a.status.order - b.status.order || a.name.localeCompare(b.name));
+  const notStarted = reps.filter((r) => r.completed === 0);
+  const quiet = reps.filter((r) => r.completed > 0 && (daysSince(r.lastPracticeAt) ?? 99) > 7);
+  const scored = (o?.breakdown ?? []).filter((d) => d.enoughData && d.mean !== null).sort((a, b) => b.mean! - a.mean!);
+  const best = scored[0];
+  const weakest = scored.length > 1 ? scored.at(-1) : undefined;
+  const leftPct = o && o.allowanceSeconds > 0 ? Math.max(0, Math.min(100, (o.remainingSeconds / o.allowanceSeconds) * 100)) : 0;
+  const periodEnd = ctx?.usage?.periodEnd ?? null;
+
   return (
-    <div className="stack">
+    <div className="stack overview">
       <div className="spread">
-        <h1 style={{ margin: 0 }}>Team overview</h1>
+        <h1 className="m0">Team overview</h1>
         <div><label htmlFor="period" className="visually-hidden">Period</label>
-          <select id="period" value={days} onChange={(e) => setDays(Number(e.target.value))} style={{ width: 'auto' }}>
+          <select id="period" value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-auto">
             <option value={7}>Last 7 days</option><option value={14}>Last 14 days</option><option value={30}>Last 30 days</option>
           </select></div>
       </div>
+
       {ov.loading && !o ? <Loading /> : ov.error ? <ErrorBox message={ov.error} onRetry={ov.reload} /> : o && (
         <>
+          {/* 1. The headline numbers, in plain words. */}
           <div className="grid three">
-            <div className="card stat-tile tile-teal"><div className="metric">{o.repsWithCompleted} of {o.activeReps}</div><div className="small muted">active reps with a completed session in the last {o.periodDays} days</div></div>
-            <div className="card stat-tile tile-mustard"><div className="metric">{o.completedSessions}</div><div className="small muted">sessions with completed feedback · {o.minutesUsed} min used</div></div>
-            <div className={`card stat-tile ${o.openFlags > 0 ? 'tile-red' : 'tile-plain'}`}><div className="metric">{o.openFlags}</div><div className="small muted">open review flags (concerns + rep reports)</div></div>
+            <div className="card stat-tile tile-teal"><div className="metric">{o.repsWithCompleted}<small> of {o.activeReps}</small></div><div className="small">reps practised in the last {o.periodDays} days</div></div>
+            <div className="card stat-tile tile-mustard"><div className="metric">{o.completedSessions}</div><div className="small">practice sessions with feedback</div></div>
+            <div className={`card stat-tile ${o.openFlags > 0 ? 'tile-red' : 'tile-plain'}`}><div className="metric">{o.openFlags}</div><div className="small">{o.openFlags === 1 ? 'thing needs' : 'things need'} your review</div></div>
           </div>
-          <div className="card">
-            <div className="spread"><h2 style={{ margin: 0 }}>Practice allowance</h2><span className="small">{fmtMinutes(Math.max(0, o.remainingSeconds))} of {fmtMinutes(o.allowanceSeconds)} left</span></div>
-            <div className="bar" style={{ marginTop: '0.5rem' }} aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, (o.remainingSeconds / o.allowanceSeconds) * 100))}%` }} /></div>
-            <p className="small muted" style={{ marginTop: '0.5rem' }}>Practice pauses when the pooled allowance runs out. In-progress sessions hold a reservation until they end.</p>
+
+          {/* 2. What it means. */}
+          <div className="card summary-card">
+            <h2>In short</h2>
+            <ul className="summary-list">
+              <li className={o.repsWithCompleted === o.activeReps && o.activeReps > 0 ? 'ok' : 'warn'}>
+                {o.activeReps === 0 ? <>You haven’t got any reps yet. <Link to="/manager/reps">Invite your team</Link> to get started.</>
+                  : o.repsWithCompleted === o.activeReps ? <>Everyone on your team has practised in the last {o.periodDays} days. Nice.</>
+                  : <>{o.repsWithCompleted} of your {o.activeReps} reps practised in the last {o.periodDays} days.{notStarted.length > 0 && <> {listNames(notStarted.map((r) => firstName(r.name)))} {notStarted.length === 1 ? 'hasn’t' : 'haven’t'} had a go yet.</>}</>}
+              </li>
+              <li className={o.openFlags > 0 ? 'warn' : 'ok'}>
+                {o.openFlags > 0 ? <>{o.openFlags} {o.openFlags === 1 ? 'session needs' : 'sessions need'} a quick look from you: the feedback spotted something, or a rep disagreed with it. See below.</> : <>Nothing needs your review right now.</>}
+              </li>
+              {best && <li className="ok">The team is strongest at <strong>{label(best.key).toLowerCase()}</strong> (average {best.mean!.toFixed(1)} out of 5).</li>}
+              {weakest && weakest.mean! < (best?.mean ?? 5) && <li className={weakest.mean! < 3 ? 'warn' : 'neutral'}>The area to work on is <strong>{label(weakest.key).toLowerCase()}</strong> (average {weakest.mean!.toFixed(1)} out of 5).{' '}
+                <Link to="/manager/scenarios">Choose scenarios</Link> that practise it.</li>}
+              {!best && o.activeReps > 0 && <li className="neutral">Scores appear once your team has done at least {MIN_SAMPLE} sessions.</li>}
+              <li className={leftPct < 20 ? 'warn' : 'neutral'}>
+                {Math.floor(Math.max(0, o.remainingSeconds) / 60).toLocaleString('en-GB')} minutes of practice time left{periodEnd ? <> until {new Date(periodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</> : null}.{leftPct < 20 && ' Running low: practice stops when it runs out.'}
+              </li>
+            </ul>
+            <div className="bar" aria-hidden="true"><span style={{ width: `${leftPct}%` }} /></div>
           </div>
-          <TrendCard trend={o.trend ?? []} />
-          <TeamAnswersCard />
-          <div className="card">
-            <h2>Skill breakdown · rubric {o.rubricVersion}</h2>
-            <p className="small muted">Means use observed scores only. “Not observed” is never counted as zero. Fewer than {MIN_SAMPLE} observations is shown as not enough data.</p>
+        </>
+      )}
+
+      {/* 3. Things to do. */}
+      {(flagged.length > 0 || quiet.length > 0 || notStarted.length > 0) && (
+        <div className="card">
+          <h2>Needs your attention</h2>
+          <ul className="todo-list">
+            {flagged.map((s) => (
+              <li key={s.id}>
+                <span className="tag red">Review</span>
+                <span className="todo-text"><strong>{s.repName}</strong> · {sessionTitle(s)}<span className="small muted"> · {[s.openConcerns && `${s.openConcerns} concern${s.openConcerns === 1 ? '' : 's'} spotted`, s.openReports && `${s.openReports} feedback report${s.openReports === 1 ? '' : 's'} from the rep`].filter(Boolean).join(', ')} · {fmtDate(s.endedAt)}</span></span>
+                <Link className="btn" to={`/manager/sessions/${s.id}`}>Open</Link>
+              </li>
+            ))}
+            {[...notStarted, ...quiet].map((r) => (
+              <li key={r.userId}>
+                <span className="tag amber">Nudge</span>
+                <span className="todo-text"><strong>{r.name}</strong><span className="small muted"> · {r.completed === 0 ? 'hasn’t practised yet' : `last practised ${whenText(r.lastPracticeAt).toLowerCase()}`}</span></span>
+                <Link className="btn" to={`/manager/reps/${r.userId}`}>View</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 4. Each rep at a glance. */}
+      <div className="card table-wrap">
+        <div className="spread"><h2 className="m0">Your reps</h2><Link to="/manager/reps" className="small">Manage team</Link></div>
+        {roster.loading && !roster.data ? <Loading /> : roster.error ? <ErrorBox message={roster.error} onRetry={roster.reload} /> : reps.length === 0 ? <p className="muted">No reps yet. <Link to="/manager/reps">Invite your team</Link>.</p> : (
+          <table className="rtable">
+            <thead><tr><th>Rep</th><th>How they’re doing</th><th>Last practised</th><th>Sessions</th><th>Average score</th></tr></thead>
+            <tbody>{reps.map((r) => {
+              const w = scoreWord(r.meanScore);
+              return (
+                <tr key={r.userId}>
+                  <td className="rt-main"><Link to={`/manager/reps/${r.userId}`}><strong>{r.name}</strong></Link></td>
+                  <td data-label="How they’re doing"><span className={`tag ${r.status.tone}`}>{r.status.label}</span></td>
+                  <td data-label="Last practised">{whenText(r.lastPracticeAt)}</td>
+                  <td data-label="Sessions">{r.completed}</td>
+                  <td data-label="Average score">{r.meanScore === null ? <span className="muted small">–</span> : <><strong>{r.meanScore.toFixed(1)}</strong> <span className={`score-word ${w.tone}`}>{w.word}</span></>}</td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        )}
+        <p className="small muted m0">Scores are out of 5 and come from the AI feedback. Use them for coaching, not as a test result.</p>
+      </div>
+
+      {/* 5. Skills, in words first; the full numbers on request. */}
+      {o && (
+        <div className="card">
+          <h2>Team skills</h2>
+          <p className="small muted">The team’s average for each part of the conversation, out of 5.</p>
+          <ul className="skill-list">
+            {o.breakdown.map((d) => {
+              const mean = d.enoughData ? d.mean : null;
+              const w = scoreWord(mean);
+              return (
+                <li key={d.key}>
+                  <span className="skill-name">{label(d.key)}</span>
+                  <span className="skill-bar" aria-hidden="true"><span className={w.tone} style={{ width: `${((mean ?? 0) / 5) * 100}%` }} /></span>
+                  <span className="skill-score">{mean === null ? <span className="muted small">{w.word}</span> : <><strong>{mean.toFixed(1)}</strong> <span className={`score-word ${w.tone}`}>{w.word}</span></>}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <details className="mt-sm">
+            <summary>Show the detailed numbers</summary>
+            <p className="small muted">Rubric {o.rubricVersion}. Averages only use the times a skill came up in a conversation (“not observed” never counts as zero), and need at least {MIN_SAMPLE} observations.</p>
             <div className="table-wrap"><table className="rtable">
-              <thead><tr><th>Area</th><th>Observed</th><th>Mean</th><th>Scores 1·2·3·4·5</th></tr></thead>
+              <thead><tr><th>Area</th><th>Came up</th><th>Average</th><th>How many scored 1 · 2 · 3 · 4 · 5</th></tr></thead>
               <tbody>{o.breakdown.map((d) => (
                 <tr key={d.key}>
                   <td className="rt-main"><strong>{label(d.key)}</strong></td>
-                  <td data-label="Observed">{d.observed} <span className="muted small">({d.notObserved} not observed)</span></td>
-                  <td data-label="Mean">{d.enoughData && d.mean !== null ? <span className="mean"><span className="mean-num">{d.mean.toFixed(1)}</span><span className="mean-bar" aria-hidden="true"><span style={{ width: `${(d.mean / 5) * 100}%` }} /></span></span> : <span className="muted small">Not enough data</span>}</td>
-                  <td data-label="Scores 1·2·3·4·5" className="small">{[1, 2, 3, 4, 5].map((s) => d.distribution[s as 1]).join(' · ')}</td>
+                  <td data-label="Came up">{d.observed} <span className="muted small">(not in {d.notObserved})</span></td>
+                  <td data-label="Average">{d.enoughData && d.mean !== null ? d.mean.toFixed(1) : <span className="muted small">Not enough data</span>}</td>
+                  <td data-label="How many scored 1 · 2 · 3 · 4 · 5" className="small">{[1, 2, 3, 4, 5].map((s) => d.distribution[s as 1]).join(' · ')}</td>
                 </tr>
               ))}</tbody>
             </table></div>
             {o.excludedOtherRubric.length > 0 && <p className="small muted">Not combined: {o.excludedOtherRubric.map((x) => `${x.sessions} session(s) on rubric ${x.version}`).join(', ')}.</p>}
-          </div>
-        </>
+          </details>
+        </div>
       )}
+
+      {o && <TrendCard trend={o.trend ?? []} />}
+      <TeamAnswersCard />
+
+      {/* 6. Latest practice. */}
       <div className="card">
-        <h2>Flagged for review</h2>
-        {sessions.loading ? <Loading /> : flagged.length === 0 ? <p className="muted">Nothing flagged.</p> : (
-          <ul className="small flag-list">
-            {flagged.map((s) => <li key={s.id}><Link to={`/manager/sessions/${s.id}`}>{s.repName} · {sessionTitle(s)}</Link> — {s.openConcerns} concern(s), {s.openReports} report(s) · {fmtDate(s.endedAt)}</li>)}
-          </ul>
-        )}
-      </div>
-      <div className="card">
-        <h2>Recent sessions</h2>
-        {sessions.loading ? <Loading /> : sessions.error ? <ErrorBox message={sessions.error} /> : !sessions.data?.length ? <p className="muted">No completed practice yet.</p> : (
-          <div className="table-wrap"><table className="rtable">
-            <thead><tr><th>Practice</th><th>Rep</th><th>Ended</th><th>Status</th></tr></thead>
-            <tbody>{sessions.data.slice(0, 25).map((s) => (
-              <tr key={s.id}><td className="rt-main"><Link to={`/manager/sessions/${s.id}`}>{sessionTitle(s)}</Link></td><td data-label="Rep">{s.repName}</td><td data-label="Ended" className="small">{fmtDate(s.endedAt)}</td><td data-label="Status"><StatusTag s={s} /></td></tr>
-            ))}</tbody>
-          </table></div>
+        <h2>Latest practice</h2>
+        {sessions.loading ? <Loading /> : sessions.error ? <ErrorBox message={sessions.error} /> : !sessions.data?.length ? <p className="muted">No practice yet. Sessions appear here as soon as a rep finishes one.</p> : (
+          <>
+            <div className="table-wrap"><table className="rtable">
+              <thead><tr><th>Practice</th><th>Rep</th><th>When</th><th>Status</th></tr></thead>
+              <tbody>{sessions.data.slice(0, 8).map((s) => (
+                <tr key={s.id}><td className="rt-main"><Link to={`/manager/sessions/${s.id}`}>{sessionTitle(s)}</Link></td><td data-label="Rep">{s.repName}</td><td data-label="When" className="small">{whenText(s.endedAt)}</td><td data-label="Status"><StatusTag s={s} /></td></tr>
+              ))}</tbody>
+            </table></div>
+            {sessions.data.length > 8 && <p className="small muted m0">Showing the latest 8 of {sessions.data.length}. Open a rep under <Link to="/manager/reps">Team</Link> to see all of theirs.</p>}
+          </>
         )}
       </div>
     </div>

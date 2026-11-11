@@ -94,7 +94,9 @@ test('manager: overview, team invite link, flagged session review', async () => 
   const { page, ctx, errors } = await as(f.A.manager);
   await page.goto(srv.url + '/manager');
   await page.getByRole('heading', { name: 'Team overview' }).waitFor();
-  await page.getByText(/active reps with a completed session/).waitFor();
+  await page.getByText(/reps practised in the last/).first().waitFor();
+  await page.getByRole('heading', { name: 'In short' }).waitFor();
+  await page.getByRole('heading', { name: 'Your reps' }).waitFor();
   await menu(page, 'Team');
   await page.getByLabel('Email', { exact: true }).fill('ui.invitee@test.invalid');
   await page.getByRole('button', { name: 'Create invite link' }).click();
@@ -106,7 +108,7 @@ test('manager: overview, team invite link, flagged session review', async () => 
   await page.getByText('Settings saved.').waitFor();
   await page.getByText(/Sessions are deleted after 60 days/).waitFor();
   await menu(page, 'Overview');
-  const link = page.locator('.card', { hasText: 'Recent sessions' }).locator('tbody tr').first().getByRole('link');
+  const link = page.locator('.card', { hasText: 'Latest practice' }).locator('tbody tr').first().getByRole('link');
   await link.click();
   await page.getByRole('heading', { name: 'Review notes' }).waitFor();
   await page.getByLabel('Note').fill('Discussed in 1:1.');
