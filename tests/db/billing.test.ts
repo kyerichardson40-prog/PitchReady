@@ -52,6 +52,19 @@ test('a failed payment is recorded but keeps access; cancellation stops renewals
   assert.equal(((await f.db.user('', f.A.manager).rpc('my_billing', {})) as any).status, 'canceled');
 });
 
+test('the first paid invoice replaces a running free period with the paid one straight away', async () => {
+  await svc().rpc('owner_link_billing', { actor_id: f.B.manager, agency_id: f.B.agency, customer_id: 'cus_B2' });
+  assert.equal(await one(`select count(*) from public.usage_periods where agency_id = '${f.B.agency}' and ends_at > now()`), '1', 'a pilot-style period is running');
+  const r = await ev('invoice.paid', { customer_id: 'cus_B2', subscription_id: 'sub_B2', billing_reason: 'subscription_create', practice_minutes: 300 });
+  assert.equal(r.outcome, 'period_started');
+  assert.equal(await one(`select allowance_seconds from public.usage_periods where agency_id = '${f.B.agency}' and starts_at <= now() and ends_at > now()`), '18000');
+  assert.equal(await one(`select count(*) from public.usage_periods where agency_id = '${f.B.agency}' and ends_at > now()`), '1');
+  // A renewal invoice doesn't restart the period.
+  const again = await ev('invoice.paid', { customer_id: 'cus_B2', subscription_id: 'sub_B2', billing_reason: 'subscription_cycle', practice_minutes: 300 });
+  assert.equal(again.outcome, 'applied');
+  await svc().rpc('owner_link_billing', { actor_id: f.B.manager, agency_id: f.B.agency, customer_id: null });
+});
+
 test('unknown customers are ignored; a customer carrying a team ID is linked on first sight', async () => {
   assert.equal((await ev('invoice.paid', { customer_id: 'cus_unknown' })).outcome, 'no_team');
   const r = await ev('customer.subscription.created', { customer_id: 'cus_B1', agency_hint: f.B.agency, subscription_id: 'sub_B', status: 'active' });
